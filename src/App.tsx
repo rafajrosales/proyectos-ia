@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { auth, signInWithGoogle, logOut, db } from './firebase';
+import { auth, signInWithCredentials, logOut, db } from './firebase';
 import { onAuthStateChanged, User } from 'firebase/auth';
 import { doc, getDoc, setDoc, collection, onSnapshot, query, orderBy } from 'firebase/firestore';
 import { UserConfig, DEFAULT_CONFIG, Quote, OperationType } from './types';
@@ -20,20 +20,14 @@ export default function App() {
   const [quotes, setQuotes] = useState<Quote[]>([]);
   const [loadedQuote, setLoadedQuote] = useState<Quote | null>(null);
 
+  const [username, setUsername] = useState('');
+  const [password, setPassword] = useState('');
+
   useEffect(() => {
     let unsubQuotes: (() => void) | undefined;
 
     const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
       if (currentUser) {
-        // Validar correos permitidos
-        const ALLOWED_EMAILS = ['rafajrosales@gmail.com'];
-        if (currentUser.email && !ALLOWED_EMAILS.includes(currentUser.email)) {
-          await logOut();
-          setAuthError('Tu cuenta de Google no tiene permisos para acceder a este sistema.');
-          setLoading(false);
-          return;
-        }
-
         setAuthError(null);
         setUser(currentUser);
         
@@ -96,6 +90,28 @@ export default function App() {
     );
   }
 
+  const handleLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setAuthError(null);
+    
+    if (username !== 'Admin') {
+      setAuthError('Usuario no encontrado.');
+      return;
+    }
+
+    try {
+      await signInWithCredentials('admin@3gonica.com', password);
+    } catch (error: any) {
+      if (error.code === 'auth/wrong-password' || error.code === 'auth/invalid-credential') {
+        setAuthError('Contraseña incorrecta.');
+      } else if (error.code === 'auth/operation-not-allowed') {
+        setAuthError('La autenticación por correo/contraseña no está habilitada en Firebase. Por favor, actívala en la consola de Firebase.');
+      } else {
+        setAuthError('Error al iniciar sesión. Verifica tus credenciales.');
+      }
+    }
+  };
+
   if (!user) {
     return (
       <div className="min-h-screen bg-gray-50 flex flex-col items-center justify-center p-4">
@@ -104,7 +120,7 @@ export default function App() {
             <Zap className="w-10 h-10 text-blue-600" />
           </div>
           <h1 className="text-2xl font-bold text-gray-900 mb-2">Cotizador Láser CDMX</h1>
-          <p className="text-gray-500 mb-6">Sistema Profesional de Cotización. Inicia sesión para guardar tus configuraciones y cotizaciones.</p>
+          <p className="text-gray-500 mb-6">Sistema Profesional de Cotización. Inicia sesión para continuar.</p>
           
           {authError && (
             <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-xl text-red-600 text-sm font-medium">
@@ -112,16 +128,36 @@ export default function App() {
             </div>
           )}
 
-          <button
-            onClick={async () => {
-              setAuthError(null);
-              await signInWithGoogle();
-            }}
-            className="w-full flex items-center justify-center gap-3 bg-white border-2 border-gray-200 text-gray-700 font-semibold py-3 px-4 rounded-xl hover:bg-gray-50 transition-colors"
-          >
-            <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="Google" className="w-6 h-6" />
-            Continuar con Google
-          </button>
+          <form onSubmit={handleLogin} className="space-y-4 text-left">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Usuario</label>
+              <input
+                type="text"
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
+                className="w-full p-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all"
+                placeholder="Ingresa tu usuario"
+                required
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Contraseña</label>
+              <input
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                className="w-full p-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all"
+                placeholder="••••••••"
+                required
+              />
+            </div>
+            <button
+              type="submit"
+              className="w-full flex items-center justify-center gap-2 bg-blue-600 text-white font-semibold py-3 px-4 rounded-xl hover:bg-blue-700 transition-colors mt-6"
+            >
+              Iniciar Sesión
+            </button>
+          </form>
         </div>
       </div>
     );
