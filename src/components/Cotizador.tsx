@@ -6,9 +6,59 @@ import { db } from '../firebase';
 import { collection, addDoc, doc, updateDoc, deleteDoc } from 'firebase/firestore';
 import { User } from 'firebase/auth';
 import { handleFirestoreError } from '../utils/errorHandler';
-import { Layers, Maximize, Crop, Clock, Tags, Calculator, FileText, Save, Download, FileSpreadsheet, Lightbulb, CheckCircle, AlertTriangle, Info, Copy, Trash2, Plus } from 'lucide-react';
+import { Layers, Maximize, Crop, Clock, Tags, Calculator, FileText, Save, Download, FileSpreadsheet, Lightbulb, CheckCircle, AlertTriangle, Info, Copy, Trash2, Plus, Upload, Image as ImageIcon, FileArchive } from 'lucide-react';
 import toast from 'react-hot-toast';
 import ConfirmModal from './ConfirmModal';
+
+const compressImage = (file: File): Promise<string> => {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.readAsDataURL(file);
+    reader.onload = (event) => {
+      const img = new Image();
+      img.src = event.target?.result as string;
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        const MAX_WIDTH = 800;
+        const MAX_HEIGHT = 800;
+        let width = img.width;
+        let height = img.height;
+
+        if (width > height) {
+          if (width > MAX_WIDTH) {
+            height *= MAX_WIDTH / width;
+            width = MAX_WIDTH;
+          }
+        } else {
+          if (height > MAX_HEIGHT) {
+            width *= MAX_HEIGHT / height;
+            height = MAX_HEIGHT;
+          }
+        }
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        ctx?.drawImage(img, 0, 0, width, height);
+        resolve(canvas.toDataURL('image/jpeg', 0.6));
+      };
+      img.onerror = (error) => reject(error);
+    };
+    reader.onerror = (error) => reject(error);
+  });
+};
+
+const readFileAsBase64 = (file: File): Promise<string> => {
+  return new Promise((resolve, reject) => {
+    if (file.size > 500 * 1024) {
+      reject(new Error("El archivo es demasiado grande (máx 500KB)"));
+      return;
+    }
+    const reader = new FileReader();
+    reader.readAsDataURL(file);
+    reader.onload = () => resolve(reader.result as string);
+    reader.onerror = (error) => reject(error);
+  });
+};
 
 interface Props {
   config: UserConfig;
@@ -21,7 +71,7 @@ export default function Cotizador({ config, user, loadedQuote, onQuoteLoaded }: 
   const [materialKey, setMaterialKey] = useState('mdf3');
   const [lienzoKey, setLienzoKey] = useState('std120x240');
   const [customLienzo, setCustomLienzo] = useState({ ancho: 120, largo: 240 });
-  const [ancho, setAncho] = useState(50);
+  const [ancho, setAncho] = useState(40);
   const [largo, setLargo] = useState(40);
   const [cantidad, setCantidad] = useState(1);
   const [redondeo, setRedondeo] = useState(0);
@@ -32,8 +82,16 @@ export default function Cotizador({ config, user, loadedQuote, onQuoteLoaded }: 
   const [urgencia, setUrgencia] = useState(1);
   const [veta, setVeta] = useState(false);
   const [proceso, setProceso] = useState('corte');
+  const [complejidad, setComplejidad] = useState('sencillo');
+  const [aplicarIva, setAplicarIva] = useState(true);
   const [cliente, setCliente] = useState('');
   const [notas, setNotas] = useState('');
+  
+  const [fotoFile, setFotoFile] = useState<File | null>(null);
+  const [archivoFile, setArchivoFile] = useState<File | null>(null);
+  const [fotoUrl, setFotoUrl] = useState<string | undefined>(undefined);
+  const [archivoUrl, setArchivoUrl] = useState<string | undefined>(undefined);
+
   const [currentQuoteId, setCurrentQuoteId] = useState<string | null>(null);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
@@ -49,7 +107,7 @@ export default function Cotizador({ config, user, loadedQuote, onQuoteLoaded }: 
           setMaterialKey(parsed.inputs.materialKey ?? 'mdf3');
           setLienzoKey(parsed.inputs.lienzoKey ?? 'std120x240');
           setCustomLienzo(parsed.inputs.customLienzo ?? { ancho: 120, largo: 240 });
-          setAncho(parsed.inputs.ancho ?? 50);
+          setAncho(parsed.inputs.ancho ?? 40);
           setLargo(parsed.inputs.largo ?? 40);
           setCantidad(parsed.inputs.cantidad ?? 1);
           setRedondeo(parsed.inputs.redondeo ?? 0);
@@ -60,8 +118,14 @@ export default function Cotizador({ config, user, loadedQuote, onQuoteLoaded }: 
           setUrgencia(parsed.inputs.urgencia ?? 1);
           setVeta(parsed.inputs.veta ?? false);
           setProceso(parsed.inputs.proceso ?? 'corte');
+          setComplejidad(parsed.inputs.complejidad ?? 'sencillo');
+          setAplicarIva(parsed.inputs.aplicarIva ?? true);
           setCliente(parsed.inputs.cliente ?? '');
           setNotas(parsed.inputs.notas ?? '');
+          setFotoUrl(parsed.fotoUrl);
+          setArchivoUrl(parsed.archivoUrl);
+          setFotoFile(null);
+          setArchivoFile(null);
         } else {
           toast.error('Esta cotización antigua no contiene los datos de entrada para ser editada.');
         }
@@ -75,13 +139,35 @@ export default function Cotizador({ config, user, loadedQuote, onQuoteLoaded }: 
   useEffect(() => {
     const res = calcularCotizacion(
       config, materialKey, lienzoKey, customLienzo, ancho, largo, cantidad, redondeo,
-      tiempoSimulado, setup, minutosDiseno, margen, urgencia, veta, proceso, notas
+      tiempoSimulado, setup, minutosDiseno, margen, urgencia, veta, proceso, complejidad, aplicarIva, notas
     );
     setResultado(res);
-  }, [config, materialKey, lienzoKey, customLienzo, ancho, largo, cantidad, redondeo, tiempoSimulado, setup, minutosDiseno, margen, urgencia, veta, proceso, notas]);
+  }, [config, materialKey, lienzoKey, customLienzo, ancho, largo, cantidad, redondeo, tiempoSimulado, setup, minutosDiseno, margen, urgencia, veta, proceso, complejidad, aplicarIva, notas]);
 
-  const getQuoteDataToSave = () => {
+  const getQuoteDataToSave = async () => {
     if (!resultado) return null;
+
+    let finalFotoUrl = fotoUrl;
+    let finalArchivoUrl = archivoUrl;
+
+    if (fotoFile) {
+      try {
+        finalFotoUrl = await compressImage(fotoFile);
+      } catch (error) {
+        console.error("Error procesando foto", error);
+        toast.error("No se pudo procesar la foto");
+      }
+    }
+
+    if (archivoFile) {
+      try {
+        finalArchivoUrl = await readFileAsBase64(archivoFile);
+      } catch (error) {
+        console.error("Error procesando archivo", error);
+        toast.error(error instanceof Error ? error.message : "No se pudo procesar el archivo de corte");
+      }
+    }
+
     return {
       cliente: cliente || 'Sin nombre',
       material: resultado.material.nombre,
@@ -89,6 +175,8 @@ export default function Cotizador({ config, user, loadedQuote, onQuoteLoaded }: 
       total: resultado.total,
       datos: JSON.stringify({
         ...resultado,
+        fotoUrl: finalFotoUrl,
+        archivoUrl: finalArchivoUrl,
         inputs: {
           materialKey,
           lienzoKey,
@@ -104,6 +192,8 @@ export default function Cotizador({ config, user, loadedQuote, onQuoteLoaded }: 
           urgencia,
           veta,
           proceso,
+          complejidad,
+          aplicarIva,
           cliente,
           notas
         }
@@ -112,12 +202,19 @@ export default function Cotizador({ config, user, loadedQuote, onQuoteLoaded }: 
   };
 
   const handleUpdate = async () => {
-    const data = getQuoteDataToSave();
-    if (!data || !currentQuoteId) return;
     setSaving(true);
+    const data = await getQuoteDataToSave();
+    if (!data || !currentQuoteId) {
+      setSaving(false);
+      return;
+    }
     try {
       await updateDoc(doc(db, `users/${user.uid}/quotes/${currentQuoteId}`), data);
       toast.success('Cambios guardados exitosamente');
+      if (fotoFile) setFotoUrl(JSON.parse(data.datos).fotoUrl);
+      if (archivoFile) setArchivoUrl(JSON.parse(data.datos).archivoUrl);
+      setFotoFile(null);
+      setArchivoFile(null);
     } catch (error) {
       toast.error('Error al guardar los cambios.');
       handleFirestoreError(error, OperationType.UPDATE, `users/${user.uid}/quotes/${currentQuoteId}`);
@@ -127,9 +224,12 @@ export default function Cotizador({ config, user, loadedQuote, onQuoteLoaded }: 
   };
 
   const handleSaveAsNew = async () => {
-    const data = getQuoteDataToSave();
-    if (!data) return;
     setSaving(true);
+    const data = await getQuoteDataToSave();
+    if (!data) {
+      setSaving(false);
+      return;
+    }
     try {
       const quoteData: Omit<Quote, 'id'> = {
         ...data,
@@ -139,6 +239,10 @@ export default function Cotizador({ config, user, loadedQuote, onQuoteLoaded }: 
       const docRef = await addDoc(collection(db, `users/${user.uid}/quotes`), quoteData);
       setCurrentQuoteId(docRef.id);
       toast.success('Cotización guardada exitosamente');
+      if (fotoFile) setFotoUrl(JSON.parse(data.datos).fotoUrl);
+      if (archivoFile) setArchivoUrl(JSON.parse(data.datos).archivoUrl);
+      setFotoFile(null);
+      setArchivoFile(null);
     } catch (error) {
       toast.error('Error al guardar la cotización.');
       handleFirestoreError(error, OperationType.CREATE, `users/${user.uid}/quotes`);
@@ -168,8 +272,12 @@ export default function Cotizador({ config, user, loadedQuote, onQuoteLoaded }: 
     setCliente('');
     setNotas('');
     setCantidad(1);
-    setAncho(50);
+    setAncho(40);
     setLargo(40);
+    setFotoFile(null);
+    setArchivoFile(null);
+    setFotoUrl(undefined);
+    setArchivoUrl(undefined);
   };
 
   const formatCurrency = (num: number) => `$${num.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
@@ -305,17 +413,37 @@ export default function Cotizador({ config, user, loadedQuote, onQuoteLoaded }: 
               <input type="number" value={minutosDiseno} onChange={(e) => setMinutosDiseno(Number(e.target.value))} className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500" />
             </div>
             <div>
-              <label className="block text-xs font-semibold text-gray-700 mb-1">Hojas</label>
-              <input type="number" value={resultado.hojasNecesarias} readOnly className="w-full px-4 py-2 border border-gray-200 bg-gray-100 rounded-lg text-gray-600" />
+              <label className="block text-xs font-semibold text-gray-700 mb-1">Paneles</label>
+              <input type="number" value={resultado.panelesNecesarios} readOnly className="w-full px-4 py-2 border border-gray-200 bg-gray-100 rounded-lg text-gray-600" />
             </div>
           </div>
-          <div className="mt-4 flex gap-4">
-            {['corte', 'grabado', 'mixto'].map((p) => (
-              <label key={p} className="flex items-center gap-2 cursor-pointer">
-                <input type="radio" name="proceso" value={p} checked={proceso === p} onChange={(e) => setProceso(e.target.value)} className="w-4 h-4 text-blue-600" />
-                <span className="text-sm font-medium capitalize">{p}</span>
-              </label>
-            ))}
+          <div className="mt-4 flex flex-col gap-4">
+            <div>
+              <label className="block text-xs font-semibold text-gray-700 mb-2">Tipo de Trabajo</label>
+              <div className="flex gap-4">
+                {['corte', 'grabado', 'mixto'].map((p) => (
+                  <label key={p} className="flex items-center gap-2 cursor-pointer">
+                    <input type="radio" name="proceso" value={p} checked={proceso === p} onChange={(e) => setProceso(e.target.value)} className="w-4 h-4 text-blue-600" />
+                    <span className="text-sm font-medium capitalize">{p}</span>
+                  </label>
+                ))}
+              </div>
+            </div>
+            <div>
+              <label className="block text-xs font-semibold text-gray-700 mb-2">Complejidad (Multiplicador de Costo)</label>
+              <div className="flex gap-4">
+                {[
+                  { id: 'sencillo', label: 'Sencillo (1x)' },
+                  { id: 'estandar', label: 'Estándar (1.5x)' },
+                  { id: 'complejo', label: 'Complejo (2x)' }
+                ].map((c) => (
+                  <label key={c.id} className="flex items-center gap-2 cursor-pointer">
+                    <input type="radio" name="complejidad" value={c.id} checked={complejidad === c.id} onChange={(e) => setComplejidad(e.target.value)} className="w-4 h-4 text-orange-600" />
+                    <span className="text-sm font-medium">{c.label}</span>
+                  </label>
+                ))}
+              </div>
+            </div>
           </div>
         </div>
 
@@ -346,12 +474,82 @@ export default function Cotizador({ config, user, loadedQuote, onQuoteLoaded }: 
             </div>
           </div>
           <div className="mt-4">
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input type="checkbox" checked={aplicarIva} onChange={(e) => setAplicarIva(e.target.checked)} className="w-4 h-4 text-blue-600 rounded" />
+              <span className="text-sm font-semibold text-gray-700">Aplicar IVA (16%)</span>
+            </label>
+          </div>
+          <div className="mt-4">
             <label className="block text-xs font-semibold text-gray-700 mb-1">Cliente</label>
             <input type="text" value={cliente} onChange={(e) => setCliente(e.target.value)} placeholder="Nombre del cliente" className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500" />
           </div>
           <div className="mt-4">
             <label className="block text-xs font-semibold text-gray-700 mb-1">Notas</label>
             <textarea value={notas} onChange={(e) => setNotas(e.target.value)} rows={2} className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"></textarea>
+          </div>
+        </div>
+
+        {/* Archivos Adjuntos */}
+        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-xl font-bold text-gray-800 flex items-center gap-2">
+              <span className="w-8 h-8 bg-teal-100 text-teal-600 rounded-lg flex items-center justify-center text-sm">6</span>
+              <Upload className="text-teal-600" /> Archivos Adjuntos
+            </h2>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {/* Foto del Trabajo */}
+            <div className="border-2 border-dashed border-gray-300 rounded-xl p-4 flex flex-col items-center justify-center text-center hover:bg-gray-50 transition-colors">
+              <ImageIcon className="text-gray-400 mb-2" size={32} />
+              <p className="text-sm font-semibold text-gray-700 mb-1">Foto del Trabajo</p>
+              <p className="text-xs text-gray-500 mb-3">Sube una imagen de referencia</p>
+              <input 
+                type="file" 
+                accept="image/*" 
+                className="hidden" 
+                id="foto-upload"
+                onChange={(e) => {
+                  if (e.target.files && e.target.files[0]) {
+                    setFotoFile(e.target.files[0]);
+                  }
+                }}
+              />
+              <label htmlFor="foto-upload" className="cursor-pointer bg-white border border-gray-300 text-gray-700 px-4 py-2 rounded-lg text-sm font-medium hover:bg-gray-50">
+                Seleccionar Imagen
+              </label>
+              {fotoFile && <p className="text-xs text-emerald-600 mt-2 font-medium truncate w-full px-2">{fotoFile.name}</p>}
+              {!fotoFile && fotoUrl && (
+                <a href={fotoUrl} target="_blank" rel="noopener noreferrer" className="text-xs text-blue-600 mt-2 font-medium hover:underline">
+                  Ver foto actual
+                </a>
+              )}
+            </div>
+
+            {/* Archivo de Corte */}
+            <div className="border-2 border-dashed border-gray-300 rounded-xl p-4 flex flex-col items-center justify-center text-center hover:bg-gray-50 transition-colors">
+              <FileArchive className="text-gray-400 mb-2" size={32} />
+              <p className="text-sm font-semibold text-gray-700 mb-1">Archivo de Corte</p>
+              <p className="text-xs text-gray-500 mb-3">Vectores (SVG, DXF, AI, PDF)</p>
+              <input 
+                type="file" 
+                className="hidden" 
+                id="archivo-upload"
+                onChange={(e) => {
+                  if (e.target.files && e.target.files[0]) {
+                    setArchivoFile(e.target.files[0]);
+                  }
+                }}
+              />
+              <label htmlFor="archivo-upload" className="cursor-pointer bg-white border border-gray-300 text-gray-700 px-4 py-2 rounded-lg text-sm font-medium hover:bg-gray-50">
+                Seleccionar Archivo
+              </label>
+              {archivoFile && <p className="text-xs text-emerald-600 mt-2 font-medium truncate w-full px-2">{archivoFile.name}</p>}
+              {!archivoFile && archivoUrl && (
+                <a href={archivoUrl} target="_blank" rel="noopener noreferrer" className="text-xs text-blue-600 mt-2 font-medium hover:underline">
+                  Descargar archivo actual
+                </a>
+              )}
+            </div>
           </div>
         </div>
       </div>
@@ -364,6 +562,9 @@ export default function Cotizador({ config, user, loadedQuote, onQuoteLoaded }: 
           <div className="space-y-3 text-sm">
             <div className="flex justify-between border-b border-gray-700 pb-2">
               <span className="text-gray-400">Material:</span> <span className="font-semibold">{resultado.material.nombre}</span>
+            </div>
+            <div className="flex justify-between border-b border-gray-700 pb-2">
+              <span className="text-gray-400">Paneles (40x40):</span> <span className="font-semibold">{resultado.panelesNecesarios}</span>
             </div>
             <div className="flex justify-between border-b border-gray-700 pb-2">
               <span className="text-gray-400">Lienzo:</span> <span className="font-semibold">{resultado.lienzo.ancho}x{resultado.lienzo.largo}</span>
@@ -390,7 +591,7 @@ export default function Cotizador({ config, user, loadedQuote, onQuoteLoaded }: 
             <div className="flex justify-between py-1"><span className="text-gray-500">Diseño</span> <span className="font-medium">{formatCurrency(resultado.costoDiseno)}</span></div>
             <div className="flex justify-between py-1 border-b border-gray-100 pb-2"><span className="text-gray-500">Utilidad</span> <span className="font-medium text-emerald-600">{formatCurrency(resultado.utilidad)}</span></div>
             <div className="flex justify-between py-1"><span className="text-gray-500">Subtotal</span> <span className="font-medium">{formatCurrency(resultado.subtotal)}</span></div>
-            <div className="flex justify-between py-1"><span className="text-gray-500">IVA (16%)</span> <span className="font-medium">{formatCurrency(resultado.iva)}</span></div>
+            <div className="flex justify-between py-1"><span className="text-gray-500">IVA {aplicarIva ? '(16%)' : '(0%)'}</span> <span className="font-medium">{formatCurrency(resultado.iva)}</span></div>
             <div className="flex justify-between py-3 px-4 bg-blue-50 rounded-xl mt-2 border border-blue-100">
               <span className="font-bold text-gray-800 text-lg">TOTAL</span>
               <span className="font-bold text-2xl text-blue-600">{formatCurrency(resultado.total)}</span>
@@ -443,6 +644,7 @@ export default function Cotizador({ config, user, loadedQuote, onQuoteLoaded }: 
             {veta && <li className="flex gap-2"><Info className="text-blue-500 shrink-0" size={16} /> Dirección de veta activa. Merma incrementada.</li>}
             {urgencia > 1 && <li className="flex gap-2"><Clock className="text-orange-500 shrink-0" size={16} /> Tarifa de urgencia aplicada.</li>}
             {resultado.hojasNecesarias > 1 && <li className="flex gap-2"><Layers className="text-purple-500 shrink-0" size={16} /> {resultado.hojasNecesarias} hojas requeridas. Verificar inventario.</li>}
+            {resultado.panelesNecesarios > 0 && <li className="flex gap-2"><Crop className="text-blue-500 shrink-0" size={16} /> Se cobrarán {resultado.panelesNecesarios} paneles de 40x40cm.</li>}
             {resultado.aprovechamiento < 50 && <li className="flex gap-2"><AlertTriangle className="text-amber-500 shrink-0" size={16} /> Aprovechamiento bajo. Optimizar nesting.</li>}
           </ul>
         </div>

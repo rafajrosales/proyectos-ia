@@ -97,7 +97,7 @@ service cloud.firestore {
              request.resource.data.material is string && request.resource.data.material.size() <= 100 &&
              request.resource.data.lienzo is string && request.resource.data.lienzo.size() <= 100 &&
              request.resource.data.total is number && request.resource.data.total >= 0 &&
-             request.resource.data.datos is string && request.resource.data.datos.size() <= 50000;
+             request.resource.data.datos is string && request.resource.data.datos.size() <= 1000000;
     }
 
     // ===============================================================

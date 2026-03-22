@@ -44,6 +44,7 @@ export interface DetailedQuoteData {
   cantidad: number;
   tiempoTotalMinutos: number;
   hojasNecesarias: number;
+  panelesNecesarios: number;
   aprovechamiento: number;
   costoFijoHora: number;
   costoMaquina: number;
@@ -51,6 +52,8 @@ export interface DetailedQuoteData {
   costoMaterial: number;
   costoDiseno: number;
   notas?: string;
+  fotoUrl?: string;
+  archivoUrl?: string;
 }
 
 export const DEFAULT_CONFIG: Omit<UserConfig, 'uid' | 'updatedAt'> = {

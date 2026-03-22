@@ -29,6 +29,8 @@ export function calcularCotizacion(
   urgencia: number,
   veta: boolean,
   proceso: string,
+  complejidad: string,
+  aplicarIva: boolean,
   notas?: string
 ): DetailedQuoteData {
   const materialBase = MATERIALES[materialKey];
@@ -50,20 +52,33 @@ export function calcularCotizacion(
   const largoCobrar = redondearComercial(largo, redondeo);
   const areaCobrar = anchoCobrar * largoCobrar * cantidad;
 
-  const merma = veta ? 0.35 : 0.20;
-  const areaConMerma = areaCobrar * (1 + merma);
-  let hojasNecesarias = Math.ceil(areaConMerma / areaHoja);
+  // El precio de la hoja se divide en 18 paneles (cortes de 40x40cm = 1600cm2)
+  const areaPanel = 40 * 40; // 1600 cm2
+  const precioPorPanel = material.costo / 18;
+  
+  // Al cobrar por paneles completos, el desperdicio ya se absorbe al redondear hacia arriba.
+  // Solo aplicamos merma extra si se exige respetar la veta (35%).
+  const areaParaPaneles = veta ? areaCobrar * 1.35 : areaCobrar;
+  
+  let panelesNecesarios = Math.ceil(areaParaPaneles / areaPanel);
+  if (panelesNecesarios < 1) panelesNecesarios = 1;
+
+  let hojasNecesarias = Math.ceil(areaParaPaneles / areaHoja);
   if (hojasNecesarias < 1) hojasNecesarias = 1;
 
-  // Costo proporcional al área utilizada (incluyendo merma)
-  const costoMaterial = (areaConMerma / areaHoja) * material.costo;
-  const aprovechamiento = Math.min(100, (areaCobrar / (hojasNecesarias * areaHoja)) * 100);
+  // Costo basado en los paneles de 40x40 utilizados
+  const costoMaterial = panelesNecesarios * precioPorPanel;
+  const aprovechamiento = Math.min(100, (areaCobrar / (panelesNecesarios * areaPanel)) * 100);
 
   let procesoMultiplier = 1;
   if (proceso === 'grabado') procesoMultiplier = 1.5;
   if (proceso === 'mixto') procesoMultiplier = 1.3;
 
-  const costoMaquina = tiempoTotalHoras * costoFijoHora * procesoMultiplier;
+  let complejidadMultiplier = 1;
+  if (complejidad === 'estandar') complejidadMultiplier = 1.5;
+  if (complejidad === 'complejo') complejidadMultiplier = 2.0;
+
+  const costoMaquina = tiempoTotalHoras * costoFijoHora * procesoMultiplier * complejidadMultiplier;
   const costoEnergia = tiempoTotalHoras * 3 * cfg.kwh;
   const costoDiseno = (minutosDiseno / 60) * 100;
   const costoTotalDirecto = costoMaquina + costoEnergia + costoMaterial + costoDiseno;
@@ -83,7 +98,7 @@ export function calcularCotizacion(
     utilidad -= descuento;
   }
 
-  const iva = subtotal * 0.16;
+  const iva = aplicarIva ? subtotal * 0.16 : 0;
   const total = subtotal + iva;
 
   return {
@@ -100,6 +115,7 @@ export function calcularCotizacion(
     cantidad,
     tiempoTotalMinutos,
     hojasNecesarias,
+    panelesNecesarios,
     aprovechamiento,
     costoFijoHora,
     costoMaquina,
