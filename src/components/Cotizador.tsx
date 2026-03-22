@@ -1,0 +1,461 @@
+import React, { useState, useEffect } from 'react';
+import { UserConfig, MATERIALES, LIENZOS, DetailedQuoteData, Quote, OperationType } from '../types';
+import { calcularCotizacion } from '../utils/calculations';
+import { generarPDF, exportarJSON } from '../utils/export';
+import { db } from '../firebase';
+import { collection, addDoc, doc, updateDoc, deleteDoc } from 'firebase/firestore';
+import { User } from 'firebase/auth';
+import { handleFirestoreError } from '../utils/errorHandler';
+import { Layers, Maximize, Crop, Clock, Tags, Calculator, FileText, Save, Download, FileSpreadsheet, Lightbulb, CheckCircle, AlertTriangle, Info, Copy, Trash2, Plus } from 'lucide-react';
+import toast from 'react-hot-toast';
+import ConfirmModal from './ConfirmModal';
+
+interface Props {
+  config: UserConfig;
+  user: User;
+  loadedQuote?: Quote | null;
+  onQuoteLoaded?: () => void;
+}
+
+export default function Cotizador({ config, user, loadedQuote, onQuoteLoaded }: Props) {
+  const [materialKey, setMaterialKey] = useState('mdf3');
+  const [lienzoKey, setLienzoKey] = useState('std120x240');
+  const [customLienzo, setCustomLienzo] = useState({ ancho: 120, largo: 240 });
+  const [ancho, setAncho] = useState(50);
+  const [largo, setLargo] = useState(40);
+  const [cantidad, setCantidad] = useState(1);
+  const [redondeo, setRedondeo] = useState(0);
+  const [tiempoSimulado, setTiempoSimulado] = useState(30);
+  const [setup, setSetup] = useState(15);
+  const [minutosDiseno, setMinutosDiseno] = useState(0);
+  const [margen, setMargen] = useState(0.30);
+  const [urgencia, setUrgencia] = useState(1);
+  const [veta, setVeta] = useState(false);
+  const [proceso, setProceso] = useState('corte');
+  const [cliente, setCliente] = useState('');
+  const [notas, setNotas] = useState('');
+  const [currentQuoteId, setCurrentQuoteId] = useState<string | null>(null);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+
+  const [resultado, setResultado] = useState<DetailedQuoteData | null>(null);
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    if (loadedQuote) {
+      setCurrentQuoteId(loadedQuote.id || null);
+      try {
+        const parsed = JSON.parse(loadedQuote.datos);
+        if (parsed.inputs) {
+          setMaterialKey(parsed.inputs.materialKey ?? 'mdf3');
+          setLienzoKey(parsed.inputs.lienzoKey ?? 'std120x240');
+          setCustomLienzo(parsed.inputs.customLienzo ?? { ancho: 120, largo: 240 });
+          setAncho(parsed.inputs.ancho ?? 50);
+          setLargo(parsed.inputs.largo ?? 40);
+          setCantidad(parsed.inputs.cantidad ?? 1);
+          setRedondeo(parsed.inputs.redondeo ?? 0);
+          setTiempoSimulado(parsed.inputs.tiempoSimulado ?? 30);
+          setSetup(parsed.inputs.setup ?? 15);
+          setMinutosDiseno(parsed.inputs.minutosDiseno ?? 0);
+          setMargen(parsed.inputs.margen ?? 0.30);
+          setUrgencia(parsed.inputs.urgencia ?? 1);
+          setVeta(parsed.inputs.veta ?? false);
+          setProceso(parsed.inputs.proceso ?? 'corte');
+          setCliente(parsed.inputs.cliente ?? '');
+          setNotas(parsed.inputs.notas ?? '');
+        } else {
+          toast.error('Esta cotización antigua no contiene los datos de entrada para ser editada.');
+        }
+      } catch (e) {
+        console.error('Error parsing loaded quote', e);
+      }
+      if (onQuoteLoaded) onQuoteLoaded();
+    }
+  }, [loadedQuote, onQuoteLoaded]);
+
+  useEffect(() => {
+    const res = calcularCotizacion(
+      config, materialKey, lienzoKey, customLienzo, ancho, largo, cantidad, redondeo,
+      tiempoSimulado, setup, minutosDiseno, margen, urgencia, veta, proceso, notas
+    );
+    setResultado(res);
+  }, [config, materialKey, lienzoKey, customLienzo, ancho, largo, cantidad, redondeo, tiempoSimulado, setup, minutosDiseno, margen, urgencia, veta, proceso, notas]);
+
+  const getQuoteDataToSave = () => {
+    if (!resultado) return null;
+    return {
+      cliente: cliente || 'Sin nombre',
+      material: resultado.material.nombre,
+      lienzo: `${resultado.lienzo.ancho}x${resultado.lienzo.largo}cm`,
+      total: resultado.total,
+      datos: JSON.stringify({
+        ...resultado,
+        inputs: {
+          materialKey,
+          lienzoKey,
+          customLienzo,
+          ancho,
+          largo,
+          cantidad,
+          redondeo,
+          tiempoSimulado,
+          setup,
+          minutosDiseno,
+          margen,
+          urgencia,
+          veta,
+          proceso,
+          cliente,
+          notas
+        }
+      })
+    };
+  };
+
+  const handleUpdate = async () => {
+    const data = getQuoteDataToSave();
+    if (!data || !currentQuoteId) return;
+    setSaving(true);
+    try {
+      await updateDoc(doc(db, `users/${user.uid}/quotes/${currentQuoteId}`), data);
+      toast.success('Cambios guardados exitosamente');
+    } catch (error) {
+      toast.error('Error al guardar los cambios.');
+      handleFirestoreError(error, OperationType.UPDATE, `users/${user.uid}/quotes/${currentQuoteId}`);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleSaveAsNew = async () => {
+    const data = getQuoteDataToSave();
+    if (!data) return;
+    setSaving(true);
+    try {
+      const quoteData: Omit<Quote, 'id'> = {
+        ...data,
+        uid: user.uid,
+        fecha: new Date().toISOString(),
+      };
+      const docRef = await addDoc(collection(db, `users/${user.uid}/quotes`), quoteData);
+      setCurrentQuoteId(docRef.id);
+      toast.success('Cotización guardada exitosamente');
+    } catch (error) {
+      toast.error('Error al guardar la cotización.');
+      handleFirestoreError(error, OperationType.CREATE, `users/${user.uid}/quotes`);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleDelete = async () => {
+    if (!currentQuoteId) return;
+    setSaving(true);
+    try {
+      await deleteDoc(doc(db, `users/${user.uid}/quotes/${currentQuoteId}`));
+      toast.success('Cotización eliminada exitosamente');
+      handleNew();
+    } catch (error) {
+      toast.error('Error al eliminar la cotización.');
+      handleFirestoreError(error, OperationType.DELETE, `users/${user.uid}/quotes/${currentQuoteId}`);
+    } finally {
+      setSaving(false);
+      setShowDeleteConfirm(false);
+    }
+  };
+
+  const handleNew = () => {
+    setCurrentQuoteId(null);
+    setCliente('');
+    setNotas('');
+    setCantidad(1);
+    setAncho(50);
+    setLargo(40);
+  };
+
+  const formatCurrency = (num: number) => `$${num.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  const formatNumber = (num: number) => num.toLocaleString('es-MX', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
+
+  if (!resultado) return null;
+
+  return (
+    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 animate-fade-in">
+      {/* Left Panel */}
+      <div className="lg:col-span-2 space-y-6">
+        {/* Material */}
+        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-xl font-bold text-gray-800 flex items-center gap-2">
+              <span className="w-8 h-8 bg-amber-100 text-amber-600 rounded-lg flex items-center justify-center text-sm">1</span>
+              <Layers className="text-amber-600" /> Tipo de Material
+            </h2>
+            <span className="text-xs text-gray-500 bg-gray-100 px-3 py-1 rounded-full">Ground Truth México</span>
+          </div>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+            {Object.entries(MATERIALES).map(([key, mat]) => {
+              const costoActual = config.materiales?.[key] ?? mat.costo;
+              return (
+              <button
+                key={key}
+                onClick={() => {
+                  setMaterialKey(key);
+                  if (key === 'espejo') setLienzoKey('espejo120x180');
+                }}
+                className={`p-4 rounded-xl border-2 transition-all text-center ${materialKey === key ? 'border-blue-500 bg-blue-50' : 'border-gray-200 hover:border-blue-300'}`}
+              >
+                <div className={`w-10 h-10 mx-auto rounded mb-2 ${key.includes('mdf') ? 'bg-amber-700' : key === 'espejo' ? 'bg-purple-400' : 'bg-cyan-400'}`}></div>
+                <p className="font-semibold text-sm text-gray-800">{mat.nombre}</p>
+                <p className="text-xs text-gray-500 mt-1">${costoActual}/hoja</p>
+              </button>
+            )})}
+          </div>
+          <div className="mt-4">
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input type="checkbox" checked={veta} onChange={(e) => setVeta(e.target.checked)} className="w-4 h-4 text-blue-600 rounded" />
+              <span className="text-sm text-gray-700">Respetar dirección de veta (+35% merma)</span>
+            </label>
+          </div>
+        </div>
+
+        {/* Canvas */}
+        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-xl font-bold text-gray-800 flex items-center gap-2">
+              <span className="w-8 h-8 bg-emerald-100 text-emerald-600 rounded-lg flex items-center justify-center text-sm">2</span>
+              <Maximize className="text-emerald-600" /> Tamaño de Lienzo (Hoja)
+            </h2>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+            {Object.entries(LIENZOS).map(([key, l]) => (
+              <button
+                key={key}
+                onClick={() => setLienzoKey(key)}
+                className={`p-4 rounded-xl border-2 transition-all text-center ${lienzoKey === key ? 'border-emerald-500 bg-emerald-50' : 'border-gray-200 hover:border-emerald-300'}`}
+              >
+                <p className="font-semibold text-sm text-gray-800">{l.nombre}</p>
+                <p className="text-xl font-bold text-gray-900">{key === 'custom' ? 'Configurar' : `${l.ancho} × ${l.largo} cm`}</p>
+              </button>
+            ))}
+          </div>
+          {lienzoKey === 'custom' && (
+            <div className="mt-4 grid grid-cols-2 gap-3 p-4 bg-gray-50 rounded-xl border-2 border-dashed border-gray-300">
+              <div>
+                <label className="block text-xs font-semibold text-gray-700 mb-1">Ancho (cm)</label>
+                <input type="number" value={customLienzo.ancho} onChange={(e) => setCustomLienzo({...customLienzo, ancho: Number(e.target.value)})} className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500" />
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-gray-700 mb-1">Largo (cm)</label>
+                <input type="number" value={customLienzo.largo} onChange={(e) => setCustomLienzo({...customLienzo, largo: Number(e.target.value)})} className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500" />
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Design */}
+        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-xl font-bold text-gray-800 flex items-center gap-2">
+              <span className="w-8 h-8 bg-blue-100 text-blue-600 rounded-lg flex items-center justify-center text-sm">3</span>
+              <Crop className="text-blue-600" /> Tamaño de Diseño
+            </h2>
+          </div>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <div>
+              <label className="block text-xs font-semibold text-gray-700 mb-1">Ancho (cm)</label>
+              <input type="number" value={ancho} onChange={(e) => setAncho(Number(e.target.value))} className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500" />
+            </div>
+            <div>
+              <label className="block text-xs font-semibold text-gray-700 mb-1">Largo (cm)</label>
+              <input type="number" value={largo} onChange={(e) => setLargo(Number(e.target.value))} className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500" />
+            </div>
+            <div>
+              <label className="block text-xs font-semibold text-gray-700 mb-1">Cantidad</label>
+              <input type="number" value={cantidad} min="0.1" step="any" onChange={(e) => setCantidad(Number(e.target.value))} className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500" />
+            </div>
+            <div>
+              <label className="block text-xs font-semibold text-gray-700 mb-1">Redondeo</label>
+              <select value={redondeo} onChange={(e) => setRedondeo(Number(e.target.value))} className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
+                <option value={0}>Sin redondeo</option>
+                <option value={5}>A 5cm</option>
+                <option value={10}>A 10cm</option>
+                <option value={20}>A 20cm</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        {/* Time */}
+        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-xl font-bold text-gray-800 flex items-center gap-2">
+              <span className="w-8 h-8 bg-orange-100 text-orange-600 rounded-lg flex items-center justify-center text-sm">4</span>
+              <Clock className="text-orange-600" /> Tiempo de Proceso
+            </h2>
+          </div>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <div>
+              <label className="block text-xs font-semibold text-gray-700 mb-1">Corte (min)</label>
+              <input type="number" value={tiempoSimulado} onChange={(e) => setTiempoSimulado(Number(e.target.value))} className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500" />
+            </div>
+            <div>
+              <label className="block text-xs font-semibold text-gray-700 mb-1">Setup (min)</label>
+              <input type="number" value={setup} onChange={(e) => setSetup(Number(e.target.value))} className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500" />
+            </div>
+            <div>
+              <label className="block text-xs font-semibold text-gray-700 mb-1">Diseño (min)</label>
+              <input type="number" value={minutosDiseno} onChange={(e) => setMinutosDiseno(Number(e.target.value))} className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500" />
+            </div>
+            <div>
+              <label className="block text-xs font-semibold text-gray-700 mb-1">Hojas</label>
+              <input type="number" value={resultado.hojasNecesarias} readOnly className="w-full px-4 py-2 border border-gray-200 bg-gray-100 rounded-lg text-gray-600" />
+            </div>
+          </div>
+          <div className="mt-4 flex gap-4">
+            {['corte', 'grabado', 'mixto'].map((p) => (
+              <label key={p} className="flex items-center gap-2 cursor-pointer">
+                <input type="radio" name="proceso" value={p} checked={proceso === p} onChange={(e) => setProceso(e.target.value)} className="w-4 h-4 text-blue-600" />
+                <span className="text-sm font-medium capitalize">{p}</span>
+              </label>
+            ))}
+          </div>
+        </div>
+
+        {/* Pricing */}
+        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-xl font-bold text-gray-800 flex items-center gap-2">
+              <span className="w-8 h-8 bg-purple-100 text-purple-600 rounded-lg flex items-center justify-center text-sm">5</span>
+              <Tags className="text-purple-600" /> Precio y Cliente
+            </h2>
+          </div>
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-xs font-semibold text-gray-700 mb-1">Margen</label>
+              <select value={margen} onChange={(e) => setMargen(Number(e.target.value))} className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
+                <option value={0.30}>30% - Estándar</option>
+                <option value={0.50}>50% - Premium</option>
+                <option value={0.80}>80% - Exclusivo</option>
+              </select>
+            </div>
+            <div>
+              <label className="block text-xs font-semibold text-gray-700 mb-1">Urgencia</label>
+              <select value={urgencia} onChange={(e) => setUrgencia(Number(e.target.value))} className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
+                <option value={1}>Normal</option>
+                <option value={1.25}>Para hoy (+25%)</option>
+                <option value={1.50}>Express 2hrs (+50%)</option>
+              </select>
+            </div>
+          </div>
+          <div className="mt-4">
+            <label className="block text-xs font-semibold text-gray-700 mb-1">Cliente</label>
+            <input type="text" value={cliente} onChange={(e) => setCliente(e.target.value)} placeholder="Nombre del cliente" className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500" />
+          </div>
+          <div className="mt-4">
+            <label className="block text-xs font-semibold text-gray-700 mb-1">Notas</label>
+            <textarea value={notas} onChange={(e) => setNotas(e.target.value)} rows={2} className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"></textarea>
+          </div>
+        </div>
+      </div>
+
+      {/* Right Panel */}
+      <div className="space-y-6">
+        {/* Summary */}
+        <div className="bg-gradient-to-br from-gray-900 to-gray-800 rounded-2xl shadow-lg p-6 text-white">
+          <h2 className="text-lg font-bold mb-4 flex items-center gap-2"><Calculator size={20} /> Resumen Rápido</h2>
+          <div className="space-y-3 text-sm">
+            <div className="flex justify-between border-b border-gray-700 pb-2">
+              <span className="text-gray-400">Material:</span> <span className="font-semibold">{resultado.material.nombre}</span>
+            </div>
+            <div className="flex justify-between border-b border-gray-700 pb-2">
+              <span className="text-gray-400">Lienzo:</span> <span className="font-semibold">{resultado.lienzo.ancho}x{resultado.lienzo.largo}</span>
+            </div>
+            <div className="flex justify-between border-b border-gray-700 pb-2">
+              <span className="text-gray-400">Área Diseño:</span> <span className="font-semibold">{formatNumber(ancho * largo * cantidad)} cm²</span>
+            </div>
+            <div className="flex justify-between border-b border-gray-700 pb-2">
+              <span className="text-gray-400">Tiempo Real:</span> <span className="font-semibold">{Math.round(resultado.tiempoTotalMinutos)} min</span>
+            </div>
+            <div className="flex justify-between pt-1">
+              <span className="text-gray-400">Aprovechamiento:</span> <span className="font-semibold text-emerald-400">{resultado.aprovechamiento.toFixed(1)}%</span>
+            </div>
+          </div>
+        </div>
+
+        {/* Financials */}
+        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
+          <h2 className="text-lg font-bold text-gray-800 mb-4 flex items-center gap-2"><FileText className="text-blue-600" size={20} /> Desglose Financiero</h2>
+          <div className="space-y-2 text-sm">
+            <div className="flex justify-between py-1"><span className="text-gray-500">Costo Fijo Hora</span> <span className="font-medium">{formatCurrency(resultado.costoFijoHora)}</span></div>
+            <div className="flex justify-between py-1"><span className="text-gray-500">Mano de Obra</span> <span className="font-medium">{formatCurrency(resultado.costoMaquina + resultado.costoEnergia)}</span></div>
+            <div className="flex justify-between py-1"><span className="text-gray-500">Material</span> <span className="font-medium">{formatCurrency(resultado.costoMaterial)}</span></div>
+            <div className="flex justify-between py-1"><span className="text-gray-500">Diseño</span> <span className="font-medium">{formatCurrency(resultado.costoDiseno)}</span></div>
+            <div className="flex justify-between py-1 border-b border-gray-100 pb-2"><span className="text-gray-500">Utilidad</span> <span className="font-medium text-emerald-600">{formatCurrency(resultado.utilidad)}</span></div>
+            <div className="flex justify-between py-1"><span className="text-gray-500">Subtotal</span> <span className="font-medium">{formatCurrency(resultado.subtotal)}</span></div>
+            <div className="flex justify-between py-1"><span className="text-gray-500">IVA (16%)</span> <span className="font-medium">{formatCurrency(resultado.iva)}</span></div>
+            <div className="flex justify-between py-3 px-4 bg-blue-50 rounded-xl mt-2 border border-blue-100">
+              <span className="font-bold text-gray-800 text-lg">TOTAL</span>
+              <span className="font-bold text-2xl text-blue-600">{formatCurrency(resultado.total)}</span>
+            </div>
+          </div>
+        </div>
+
+        {/* Actions */}
+        <div className="space-y-3">
+          {currentQuoteId ? (
+            <>
+              <div className="grid grid-cols-2 gap-3">
+                <button onClick={handleUpdate} disabled={saving} className="w-full flex items-center justify-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3 rounded-xl shadow-md transition-colors">
+                  <Save size={18} /> Guardar Cambios
+                </button>
+                <button onClick={handleSaveAsNew} disabled={saving} className="w-full flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-xl shadow-md transition-colors">
+                  <Copy size={18} /> Guardar Copia
+                </button>
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <button onClick={() => setShowDeleteConfirm(true)} disabled={saving} className="w-full flex items-center justify-center gap-2 bg-red-600 hover:bg-red-700 text-white font-bold py-3 rounded-xl shadow-md transition-colors">
+                  <Trash2 size={18} /> Eliminar
+                </button>
+                <button onClick={handleNew} className="w-full flex items-center justify-center gap-2 bg-gray-600 hover:bg-gray-700 text-white font-bold py-3 rounded-xl shadow-md transition-colors">
+                  <Plus size={18} /> Nueva
+                </button>
+              </div>
+            </>
+          ) : (
+            <button onClick={handleSaveAsNew} disabled={saving} className="w-full flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white font-bold py-4 rounded-xl shadow-md transition-colors">
+              <Save size={20} /> {saving ? 'Guardando...' : 'Guardar Cotización'}
+            </button>
+          )}
+          <div className="grid grid-cols-2 gap-3">
+            <button onClick={() => generarPDF(cliente || 'Cliente', resultado)} className="flex items-center justify-center gap-2 bg-red-600 hover:bg-red-700 text-white font-semibold py-3 rounded-xl shadow-sm transition-colors">
+              <FileText size={18} /> PDF
+            </button>
+            <button onClick={() => exportarJSON(resultado, `Cotizacion_${cliente || 'Cliente'}_${Date.now()}.json`)} className="flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 rounded-xl shadow-sm transition-colors">
+              <Download size={18} /> JSON
+            </button>
+          </div>
+        </div>
+
+        {/* Recommendations */}
+        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
+          <h3 className="font-bold text-gray-800 mb-3 flex items-center gap-2"><Lightbulb className="text-amber-500" size={18} /> Recomendaciones</h3>
+          <ul className="space-y-2 text-sm text-gray-600">
+            {margen < 0.30 && <li className="flex gap-2"><AlertTriangle className="text-red-500 shrink-0" size={16} /> Margen bajo (&lt;30%). Riesgo de rentabilidad.</li>}
+            {cantidad >= 10 && <li className="flex gap-2"><CheckCircle className="text-emerald-500 shrink-0" size={16} /> Descuento por volumen aplicado (10%).</li>}
+            {veta && <li className="flex gap-2"><Info className="text-blue-500 shrink-0" size={16} /> Dirección de veta activa. Merma incrementada.</li>}
+            {urgencia > 1 && <li className="flex gap-2"><Clock className="text-orange-500 shrink-0" size={16} /> Tarifa de urgencia aplicada.</li>}
+            {resultado.hojasNecesarias > 1 && <li className="flex gap-2"><Layers className="text-purple-500 shrink-0" size={16} /> {resultado.hojasNecesarias} hojas requeridas. Verificar inventario.</li>}
+            {resultado.aprovechamiento < 50 && <li className="flex gap-2"><AlertTriangle className="text-amber-500 shrink-0" size={16} /> Aprovechamiento bajo. Optimizar nesting.</li>}
+          </ul>
+        </div>
+      </div>
+
+      <ConfirmModal
+        isOpen={showDeleteConfirm}
+        title="Eliminar Cotización"
+        message="¿Estás seguro de que deseas eliminar esta cotización? Esta acción no se puede deshacer."
+        onConfirm={handleDelete}
+        onCancel={() => setShowDeleteConfirm(false)}
+        confirmText="Eliminar"
+      />
+    </div>
+  );
+}

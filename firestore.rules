@@ -1,0 +1,121 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ===============================================================
+    // Assumed Data Model
+    // ===============================================================
+    //
+    // Collection: users/{userId}/config
+    // Document ID: current
+    // Fields:
+    //   - uid: string (required) - The user's ID.
+    //   - inversion: number (required) - Initial investment.
+    //   - vidaUtil: number (required) - Useful life.
+    //   - renta: number (required) - Monthly rent.
+    //   - sueldoSemanal: number (required) - Weekly salary.
+    //   - internet: number (required) - Monthly internet cost.
+    //   - mantenimientoAnual: number (required) - Annual maintenance.
+    //   - kwh: number (required) - Cost per kWh.
+    //   - horasMes: number (required) - Hours per month.
+    //   - materiales: map (required) - Custom material costs.
+    //   - updatedAt: string (required) - ISO string date.
+    //
+    // Collection: users/{userId}/quotes
+    // Document ID: auto-generated
+    // Fields:
+    //   - uid: string (required) - The user's ID.
+    //   - fecha: string (required) - ISO string date.
+    //   - cliente: string (required) - Client name.
+    //   - material: string (required) - Material name.
+    //   - lienzo: string (required) - Canvas dimensions.
+    //   - total: number (required) - Total cost.
+    //   - datos: string (required) - JSON stringified details.
+    //
+    // ===============================================================
+
+    // ===============================================================
+    // Helper Functions
+    // ===============================================================
+    
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+    
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+    
+    function isDocOwner() {
+      return isAuthenticated() && request.auth.uid == resource.data.uid;
+    }
+    
+    function uidUnchanged() {
+      return !('uid' in request.resource.data) || request.resource.data.uid == request.auth.uid;
+    }
+    
+    function uidNotModified() {
+      return !('uid' in request.resource.data) || request.resource.data.uid == resource.data.uid;
+    }
+    
+    function hasRequiredFields(fields) {
+      return request.resource.data.keys().hasAll(fields);
+    }
+    
+    function hasOnlyAllowedFields(fields) {
+      return request.resource.data.keys().hasOnly(fields);
+    }
+
+    function isValidDateString(dateStr) {
+      return dateStr is string && dateStr.matches("^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}.*Z?$");
+    }
+
+    // ===============================================================
+    // Domain Validators
+    // ===============================================================
+
+    function isValidConfig() {
+      return hasOnlyAllowedFields(['uid', 'inversion', 'vidaUtil', 'renta', 'sueldoSemanal', 'internet', 'mantenimientoAnual', 'kwh', 'horasMes', 'materiales', 'updatedAt']) &&
+             request.resource.data.uid is string && request.resource.data.uid.size() > 0 && request.resource.data.uid.size() < 100 &&
+             request.resource.data.inversion is number && request.resource.data.inversion >= 0 &&
+             request.resource.data.vidaUtil is number && request.resource.data.vidaUtil > 0 &&
+             request.resource.data.renta is number && request.resource.data.renta >= 0 &&
+             request.resource.data.sueldoSemanal is number && request.resource.data.sueldoSemanal >= 0 &&
+             request.resource.data.internet is number && request.resource.data.internet >= 0 &&
+             request.resource.data.mantenimientoAnual is number && request.resource.data.mantenimientoAnual >= 0 &&
+             request.resource.data.kwh is number && request.resource.data.kwh >= 0 &&
+             request.resource.data.horasMes is number && request.resource.data.horasMes > 0 &&
+             request.resource.data.materiales is map &&
+             isValidDateString(request.resource.data.updatedAt);
+    }
+
+    function isValidQuote() {
+      return hasOnlyAllowedFields(['uid', 'fecha', 'cliente', 'material', 'lienzo', 'total', 'datos']) &&
+             request.resource.data.uid is string && request.resource.data.uid.size() > 0 && request.resource.data.uid.size() < 100 &&
+             isValidDateString(request.resource.data.fecha) &&
+             request.resource.data.cliente is string && request.resource.data.cliente.size() <= 200 &&
+             request.resource.data.material is string && request.resource.data.material.size() <= 100 &&
+             request.resource.data.lienzo is string && request.resource.data.lienzo.size() <= 100 &&
+             request.resource.data.total is number && request.resource.data.total >= 0 &&
+             request.resource.data.datos is string && request.resource.data.datos.size() <= 50000;
+    }
+
+    // ===============================================================
+    // Rules
+    // ===============================================================
+
+    match /users/{userId}/config/{configId} {
+      allow read: if isOwner(userId);
+      allow create: if isOwner(userId) && isValidConfig() && uidUnchanged();
+      allow update: if isOwner(userId) && isValidConfig() && uidNotModified();
+      allow delete: if isOwner(userId);
+    }
+
+    match /users/{userId}/quotes/{quoteId} {
+      allow read: if isOwner(userId);
+      allow create: if isOwner(userId) && isValidQuote() && uidUnchanged();
+      allow update: if isOwner(userId) && isValidQuote() && uidNotModified();
+      allow delete: if isOwner(userId);
+    }
+  }
+}
