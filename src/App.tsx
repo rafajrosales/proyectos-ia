@@ -69,7 +69,10 @@ export default function App() {
           unsubQuotes();
           unsubQuotes = undefined;
         }
+        setUser(null);
         setQuotes([]);
+        setUsername('');
+        setPassword('');
         setLoading(false);
       }
     });
@@ -119,7 +122,7 @@ export default function App() {
           <div className="w-20 h-20 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-6">
             <Zap className="w-10 h-10 text-blue-600" />
           </div>
-          <h1 className="text-2xl font-bold text-gray-900 mb-2">Cotizador Láser CDMX</h1>
+          <h1 className="text-2xl font-bold text-gray-900 mb-2">Cotizador Láser R&G</h1>
           <p className="text-gray-500 mb-6">Sistema Profesional de Cotización. Inicia sesión para continuar.</p>
           
           {authError && (
@@ -174,7 +177,7 @@ export default function App() {
                 <Zap className="w-8 h-8 text-white" />
               </div>
               <div>
-                <h1 className="text-2xl font-bold">Cotizador Láser CDMX</h1>
+                <h1 className="text-2xl font-bold">Cotizador Láser R&G</h1>
                 <div className="flex items-center gap-2 mt-1">
                   <span className="text-blue-100 text-sm">Sistema Profesional</span>
                   <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-green-100 text-green-800">
