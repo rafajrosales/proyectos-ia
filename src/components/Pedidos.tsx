@@ -19,6 +19,7 @@ export default function Pedidos({ user }: Props) {
   const [searchTerm, setSearchTerm] = useState('');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingPedido, setEditingPedido] = useState<Pedido | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Form state
   const [clienteId, setClienteId] = useState('');
@@ -146,20 +147,37 @@ export default function Pedidos({ user }: Props) {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!clienteId || articulos.some(a => !a.nombre)) {
-      toast.error('Cliente y nombres de artículos son obligatorios');
+    if (isSubmitting) return;
+
+    if (!clienteId) {
+      toast.error('Debes seleccionar un cliente');
+      return;
+    }
+
+    if (articulos.length === 0 || articulos.some(a => !a.nombre.trim())) {
+      toast.error('Todos los artículos deben tener un nombre');
       return;
     }
 
     const selectedCliente = clientes.find(c => c.id === clienteId);
-    if (!selectedCliente) return;
+    if (!selectedCliente) {
+      toast.error('Cliente no encontrado');
+      return;
+    }
 
+    setIsSubmitting(true);
     const pedidoData = {
       uid: user.uid,
       fecha: editingPedido ? editingPedido.fecha : new Date().toISOString(),
       clienteId,
       clienteNombre: selectedCliente.nombre,
-      articulos,
+      articulos: articulos.map(a => ({
+        ...a,
+        nombre: a.nombre.trim(),
+        cantidad: Number(a.cantidad) || 1,
+        precioUnitario: Number(a.precioUnitario) || 0,
+        total: Math.round((Number(a.cantidad) || 1) * (Number(a.precioUnitario) || 0))
+      })),
       total: calculateTotal(),
       status,
       fechaEntrega,
@@ -177,6 +195,8 @@ export default function Pedidos({ user }: Props) {
       setIsModalOpen(false);
     } catch (error) {
       handleFirestoreError(error, editingPedido ? OperationType.UPDATE : OperationType.CREATE, `users/${user.uid}/pedidos`);
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -441,8 +461,9 @@ export default function Pedidos({ user }: Props) {
                           <label className="block text-[10px] font-bold text-gray-400 uppercase mb-1">Cant.</label>
                           <input 
                             type="number" 
-                            value={art.cantidad}
-                            onChange={(e) => updateArticulo(index, 'cantidad', Number(e.target.value))}
+                            value={art.cantidad || ''}
+                            onChange={(e) => updateArticulo(index, 'cantidad', e.target.value === '' ? 0 : Number(e.target.value))}
+                            onFocus={(e) => e.target.select()}
                             min="1"
                             className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none text-sm"
                             required
@@ -452,8 +473,9 @@ export default function Pedidos({ user }: Props) {
                           <label className="block text-[10px] font-bold text-gray-400 uppercase mb-1">P. Unit.</label>
                           <input 
                             type="number" 
-                            value={art.precioUnitario}
-                            onChange={(e) => updateArticulo(index, 'precioUnitario', Number(e.target.value))}
+                            value={art.precioUnitario || ''}
+                            onChange={(e) => updateArticulo(index, 'precioUnitario', e.target.value === '' ? 0 : Number(e.target.value))}
+                            onFocus={(e) => e.target.select()}
                             className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none text-sm"
                             required
                           />
@@ -528,9 +550,15 @@ export default function Pedidos({ user }: Props) {
                 </button>
                 <button 
                   type="submit"
-                  className="flex-1 flex items-center justify-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-3 rounded-xl shadow-md transition-colors"
+                  disabled={isSubmitting}
+                  className={`flex-1 flex items-center justify-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-3 rounded-xl shadow-md transition-colors ${isSubmitting ? 'opacity-70 cursor-not-allowed' : ''}`}
                 >
-                  <Save size={20} /> {editingPedido ? 'Actualizar' : 'Crear Pedido'}
+                  {isSubmitting ? (
+                    <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                  ) : (
+                    <Save size={20} />
+                  )}
+                  {isSubmitting ? 'Guardando...' : (editingPedido ? 'Actualizar' : 'Crear Pedido')}
                 </button>
               </div>
             </form>
