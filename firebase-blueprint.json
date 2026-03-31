@@ -131,9 +131,41 @@
       },
       "required": ["uid", "nombre", "createdAt"]
     },
+    "PedidoArticulo": {
+      "title": "PedidoArticulo",
+      "description": "An individual item within an order.",
+      "type": "object",
+      "properties": {
+        "nombre": {
+          "type": "string",
+          "description": "Name of the item."
+        },
+        "cantidad": {
+          "type": "number",
+          "description": "Quantity ordered."
+        },
+        "precioUnitario": {
+          "type": "number",
+          "description": "Price per unit."
+        },
+        "total": {
+          "type": "number",
+          "description": "Total value for this item."
+        },
+        "quoteId": {
+          "type": "string",
+          "description": "Reference to the original quote (optional)."
+        },
+        "datosQuote": {
+          "type": "string",
+          "description": "JSON stringified detailed quote data (optional)."
+        }
+      },
+      "required": ["nombre", "cantidad", "precioUnitario", "total"]
+    },
     "Pedido": {
       "title": "Pedido",
-      "description": "An order created from a quote.",
+      "description": "An order created from one or more quotes or manually.",
       "type": "object",
       "properties": {
         "uid": {
@@ -153,13 +185,12 @@
           "type": "string",
           "description": "Customer name at the time of order."
         },
-        "quoteId": {
-          "type": "string",
-          "description": "Reference to the original quote."
-        },
-        "articuloNombre": {
-          "type": "string",
-          "description": "Name of the item being produced."
+        "articulos": {
+          "type": "array",
+          "items": {
+            "$ref": "#/entities/PedidoArticulo"
+          },
+          "description": "List of items in the order."
         },
         "total": {
           "type": "number",
@@ -178,13 +209,9 @@
         "notas": {
           "type": "string",
           "description": "Order specific notes."
-        },
-        "datosQuote": {
-          "type": "string",
-          "description": "JSON stringified detailed quote data."
         }
       },
-      "required": ["uid", "fecha", "clienteId", "clienteNombre", "articuloNombre", "total", "status", "datosQuote"]
+      "required": ["uid", "fecha", "clienteId", "clienteNombre", "articulos", "total", "status"]
     }
   },
   "firestore": {

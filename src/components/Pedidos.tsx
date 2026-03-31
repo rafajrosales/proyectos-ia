@@ -17,6 +17,7 @@ export default function Pedidos({ user }: Props) {
   const [quotes, setQuotes] = useState<Quote[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
+  const [statusFilter, setStatusFilter] = useState<PedidoStatus | 'Todos'>('Todos');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingPedido, setEditingPedido] = useState<Pedido | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -166,19 +167,29 @@ export default function Pedidos({ user }: Props) {
     }
 
     setIsSubmitting(true);
+    
+    const processedArticulos = articulos.map(a => {
+      const cantidad = Number(a.cantidad) || 0;
+      const precioUnitario = Number(a.precioUnitario) || 0;
+      const total = Number((cantidad * precioUnitario).toFixed(2));
+      return {
+        ...a,
+        nombre: a.nombre.trim(),
+        cantidad,
+        precioUnitario,
+        total
+      };
+    });
+
+    const totalGeneral = Number(processedArticulos.reduce((sum, art) => sum + art.total, 0).toFixed(2));
+
     const pedidoData = {
       uid: user.uid,
       fecha: editingPedido ? editingPedido.fecha : new Date().toISOString(),
       clienteId,
       clienteNombre: selectedCliente.nombre,
-      articulos: articulos.map(a => ({
-        ...a,
-        nombre: a.nombre.trim(),
-        cantidad: Number(a.cantidad) || 1,
-        precioUnitario: Number(a.precioUnitario) || 0,
-        total: Math.round((Number(a.cantidad) || 1) * (Number(a.precioUnitario) || 0))
-      })),
-      total: calculateTotal(),
+      articulos: processedArticulos,
+      total: totalGeneral,
       status,
       fechaEntrega,
       notas
@@ -193,7 +204,9 @@ export default function Pedidos({ user }: Props) {
         toast.success('Pedido creado');
       }
       setIsModalOpen(false);
-    } catch (error) {
+    } catch (error: any) {
+      console.error("Error saving pedido:", error);
+      toast.error(`Error al guardar: ${error.message || 'Error desconocido'}`);
       handleFirestoreError(error, editingPedido ? OperationType.UPDATE : OperationType.CREATE, `users/${user.uid}/pedidos`);
     } finally {
       setIsSubmitting(false);
@@ -233,15 +246,24 @@ export default function Pedidos({ user }: Props) {
     }
   };
 
+  const getStatusCount = (status: string) => {
+    if (status === 'Todos') return pedidos.length;
+    return pedidos.filter(p => p.status === status).length;
+  };
+
   const filteredPedidos = pedidos.filter(p => {
     const clienteNombre = p.clienteNombre || '';
-    const status = p.status || '';
+    const statusStr = p.status || '';
     const search = searchTerm.toLowerCase();
     const articulosMatch = p.articulos?.some(a => a.nombre.toLowerCase().includes(search)) || false;
     
-    return clienteNombre.toLowerCase().includes(search) ||
-           articulosMatch ||
-           status.toLowerCase().includes(search);
+    const matchesSearch = clienteNombre.toLowerCase().includes(search) ||
+                         articulosMatch ||
+                         statusStr.toLowerCase().includes(search);
+    
+    const matchesStatus = statusFilter === 'Todos' || p.status === statusFilter;
+    
+    return matchesSearch && matchesStatus;
   });
 
   return (
@@ -259,7 +281,7 @@ export default function Pedidos({ user }: Props) {
         </button>
       </div>
 
-      <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4">
+      <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4 space-y-4">
         <div className="relative">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={20} />
           <input 
@@ -269,6 +291,39 @@ export default function Pedidos({ user }: Props) {
             onChange={(e) => setSearchTerm(e.target.value)}
             className="w-full pl-10 pr-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:bg-white outline-none transition-all"
           />
+        </div>
+
+        <div className="flex items-center gap-2 overflow-x-auto pb-2 scrollbar-hide">
+          <button
+            onClick={() => setStatusFilter('Todos')}
+            className={`px-4 py-2 rounded-full text-xs font-bold whitespace-nowrap transition-all border flex items-center gap-2 ${
+              statusFilter === 'Todos' 
+                ? 'bg-indigo-600 text-white border-indigo-600 shadow-sm' 
+                : 'bg-white text-gray-500 border-gray-200 hover:border-indigo-300'
+            }`}
+          >
+            Todos
+            <span className={`px-1.5 py-0.5 rounded-full text-[10px] ${statusFilter === 'Todos' ? 'bg-white/20' : 'bg-gray-100 text-gray-400'}`}>
+              {getStatusCount('Todos')}
+            </span>
+          </button>
+          {Object.values(PedidoStatus).map(s => (
+            <button
+              key={s}
+              onClick={() => setStatusFilter(s)}
+              className={`px-4 py-2 rounded-full text-xs font-bold whitespace-nowrap transition-all border flex items-center gap-2 ${
+                statusFilter === s 
+                  ? 'bg-indigo-600 text-white border-indigo-600 shadow-sm' 
+                  : 'bg-white text-gray-500 border-gray-200 hover:border-indigo-300'
+              }`}
+            >
+              <span className={statusFilter === s ? 'text-white' : ''}>{getStatusIcon(s)}</span>
+              {s}
+              <span className={`px-1.5 py-0.5 rounded-full text-[10px] ${statusFilter === s ? 'bg-white/20' : 'bg-gray-100 text-gray-400'}`}>
+                {getStatusCount(s)}
+              </span>
+            </button>
+          ))}
         </div>
       </div>
 
@@ -473,6 +528,7 @@ export default function Pedidos({ user }: Props) {
                           <label className="block text-[10px] font-bold text-gray-400 uppercase mb-1">P. Unit.</label>
                           <input 
                             type="number" 
+                            step="0.01"
                             value={art.precioUnitario || ''}
                             onChange={(e) => updateArticulo(index, 'precioUnitario', e.target.value === '' ? 0 : Number(e.target.value))}
                             onFocus={(e) => e.target.select()}

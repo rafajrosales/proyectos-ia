@@ -52,13 +52,11 @@ service cloud.firestore {
     //   - fecha: string (required) - ISO string date.
     //   - clienteId: string (required) - Customer ID.
     //   - clienteNombre: string (required) - Customer name.
-    //   - quoteId: string (optional) - Quote ID.
-    //   - articuloNombre: string (required) - Item name.
+    //   - articulos: list (required) - List of PedidoArticulo objects.
     //   - total: number (required) - Total value.
     //   - status: string (required) - Order status.
     //   - fechaEntrega: string (optional) - Delivery date.
     //   - notas: string (optional) - Notes.
-    //   - datosQuote: string (required) - Detailed quote data.
     //
     // ===============================================================
 
@@ -146,18 +144,16 @@ service cloud.firestore {
     }
 
     function isValidPedido() {
-      return hasOnlyAllowedFields(['uid', 'fecha', 'clienteId', 'clienteNombre', 'quoteId', 'articuloNombre', 'total', 'status', 'fechaEntrega', 'notas', 'datosQuote']) &&
+      return hasOnlyAllowedFields(['uid', 'fecha', 'clienteId', 'clienteNombre', 'articulos', 'total', 'status', 'fechaEntrega', 'notas']) &&
              request.resource.data.uid is string && request.resource.data.uid.size() > 0 && request.resource.data.uid.size() < 100 &&
              isValidDateString(request.resource.data.fecha) &&
              request.resource.data.clienteId is string && request.resource.data.clienteId.size() < 100 &&
              request.resource.data.clienteNombre is string && request.resource.data.clienteNombre.size() <= 200 &&
-             (!('quoteId' in request.resource.data) || (request.resource.data.quoteId == null || (request.resource.data.quoteId is string && request.resource.data.quoteId.size() < 100))) &&
-             request.resource.data.articuloNombre is string && request.resource.data.articuloNombre.size() <= 200 &&
+             request.resource.data.articulos is list &&
              request.resource.data.total is number && request.resource.data.total >= 0 &&
              request.resource.data.status is string &&
              (!('fechaEntrega' in request.resource.data) || (request.resource.data.fechaEntrega is string)) &&
-             (!('notas' in request.resource.data) || (request.resource.data.notas is string && request.resource.data.notas.size() <= 2000)) &&
-             request.resource.data.datosQuote is string && request.resource.data.datosQuote.size() <= 1000000;
+             (!('notas' in request.resource.data) || (request.resource.data.notas is string && request.resource.data.notas.size() <= 2000));
     }
 
     // ===============================================================
