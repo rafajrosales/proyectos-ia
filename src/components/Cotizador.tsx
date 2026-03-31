@@ -459,9 +459,12 @@ export default function Cotizador({ config, user, loadedQuote, onQuoteLoaded }: 
             <div>
               <label className="block text-xs font-semibold text-gray-700 mb-1">Margen</label>
               <select value={margen} onChange={(e) => setMargen(Number(e.target.value))} className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
-                <option value={0.30}>30% - Estándar</option>
-                <option value={0.50}>50% - Premium</option>
-                <option value={0.80}>80% - Exclusivo</option>
+                <option value={0.30}>30%</option>
+                <option value={0.40}>40%</option>
+                <option value={0.50}>50%</option>
+                <option value={0.60}>60%</option>
+                <option value={0.70}>70%</option>
+                <option value={0.80}>80%</option>
               </select>
             </div>
             <div>
@@ -584,16 +587,19 @@ export default function Cotizador({ config, user, loadedQuote, onQuoteLoaded }: 
               <span className="text-gray-400">Material:</span> <span className="font-semibold">{resultado.material.nombre}</span>
             </div>
             <div className="flex justify-between border-b border-gray-700 pb-2">
-              <span className="text-gray-400">Proporción Lienzo:</span> <span className="font-semibold">{(resultado.proporcionLienzo * 100).toFixed(1)}%</span>
+              <span className="text-gray-400">Paneles por Hoja:</span> <span className="font-semibold">{resultado.panelesPorHoja.toFixed(1)}</span>
             </div>
             <div className="flex justify-between border-b border-gray-700 pb-2">
               <span className="text-gray-400">Lienzo:</span> <span className="font-semibold">{resultado.lienzo.ancho}x{resultado.lienzo.largo}</span>
             </div>
             <div className="flex justify-between border-b border-gray-700 pb-2">
-              <span className="text-gray-400">Área Diseño:</span> <span className="font-semibold">{formatNumber(ancho * largo * cantidad)} cm²</span>
+              <span className="text-gray-400">Área Cobrable:</span> <span className="font-semibold">{formatNumber(resultado.areaPanelIndividual)} cm² {cantidad > 1 ? `(Total: ${formatNumber(resultado.areaCobrar)} cm²)` : ''}</span>
             </div>
             <div className="flex justify-between border-b border-gray-700 pb-2">
               <span className="text-gray-400">Tiempo Real:</span> <span className="font-semibold">{Math.round(resultado.tiempoTotalMinutos)} min</span>
+            </div>
+            <div className="flex justify-between border-b border-gray-700 pb-2">
+              <span className="text-gray-400">Precio Unitario:</span> <span className="font-semibold text-blue-400">{formatCurrency(resultado.precioUnitario)}</span>
             </div>
             <div className="flex justify-between pt-1">
               <span className="text-gray-400">Aprovechamiento:</span> <span className="font-semibold text-emerald-400">{resultado.aprovechamiento.toFixed(1)}%</span>
@@ -604,19 +610,76 @@ export default function Cotizador({ config, user, loadedQuote, onQuoteLoaded }: 
         {/* Financials */}
         <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
           <h2 className="text-lg font-bold text-gray-800 mb-4 flex items-center gap-2"><FileText className="text-blue-600" size={20} /> Desglose Financiero</h2>
-          <div className="space-y-2 text-sm">
-            <div className="flex justify-between py-1"><span className="text-gray-500">Costo Fijo Hora</span> <span className="font-medium">{formatCurrency(resultado.costoFijoHora)}</span></div>
-            <div className="flex justify-between py-1"><span className="text-gray-500">Mano de Obra</span> <span className="font-medium">{formatCurrency(resultado.costoMaquina + resultado.costoEnergia)}</span></div>
-            <div className="flex justify-between py-1"><span className="text-gray-500">Material Base ({(resultado.proporcionLienzo * 100).toFixed(1)}%{resultado.factorLienzo > 1 ? ` × ${resultado.factorLienzo}` : ''})</span> <span className="font-medium">{formatCurrency(resultado.costoMaterialBase)}</span></div>
-            <div className="flex justify-between py-1"><span className="text-gray-500">Margen Material (50%)</span> <span className="font-medium">{formatCurrency(resultado.margenMaterial)}</span></div>
-            <div className="flex justify-between py-1 bg-gray-50 px-2 -mx-2 rounded"><span className="text-gray-700 font-medium">Total Material</span> <span className="font-semibold text-gray-900">{formatCurrency(resultado.costoMaterial)}</span></div>
-            <div className="flex justify-between py-1"><span className="text-gray-500">Diseño</span> <span className="font-medium">{formatCurrency(resultado.costoDiseno)}</span></div>
-            <div className="flex justify-between py-1 border-b border-gray-100 pb-2"><span className="text-gray-500">Utilidad</span> <span className="font-medium text-emerald-600">{formatCurrency(resultado.utilidad)}</span></div>
-            <div className="flex justify-between py-1"><span className="text-gray-500">Subtotal</span> <span className="font-medium">{formatCurrency(resultado.subtotal)}</span></div>
-            <div className="flex justify-between py-1"><span className="text-gray-500">IVA {aplicarIva ? '(16%)' : '(0%)'}</span> <span className="font-medium">{formatCurrency(resultado.iva)}</span></div>
-            <div className="flex justify-between py-3 px-4 bg-blue-50 rounded-xl mt-2 border border-blue-100">
-              <span className="font-bold text-gray-800 text-lg">TOTAL</span>
-              <span className="font-bold text-2xl text-blue-600">{formatCurrency(resultado.total)}</span>
+          
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="text-gray-400 border-b border-gray-100">
+                  <th className="text-left py-2 font-medium">Concepto</th>
+                  <th className="text-right py-2 font-medium">Lote</th>
+                  <th className="text-right py-2 font-medium">Unitario</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-50">
+                <tr>
+                  <td className="py-2 text-gray-600">Mano de Obra</td>
+                  <td className="text-right font-medium">{formatCurrency(resultado.costoMaquina + resultado.costoEnergia)}</td>
+                  <td className="text-right text-gray-400">{formatCurrency((resultado.costoMaquina + resultado.costoEnergia) / cantidad)}</td>
+                </tr>
+                <tr>
+                  <td className="py-2 text-gray-600">Material Base (Prop.)</td>
+                  <td className="text-right font-medium">{formatCurrency(resultado.costoMaterialBase)}</td>
+                  <td className="text-right text-gray-400">{formatCurrency(resultado.costoMaterialBase / cantidad)}</td>
+                </tr>
+                <tr>
+                  <td className="py-2 text-gray-600">Recargo por Corte (25%)</td>
+                  <td className="text-right font-medium">{formatCurrency(resultado.margenMaterial)}</td>
+                  <td className="text-right text-gray-400">{formatCurrency(resultado.margenMaterial / cantidad)}</td>
+                </tr>
+                <tr className="bg-gray-50/50">
+                  <td className="py-2 font-medium text-gray-700">Total Material</td>
+                  <td className="text-right font-semibold text-gray-900">{formatCurrency(resultado.costoMaterial)}</td>
+                  <td className="text-right text-gray-500">{formatCurrency(resultado.costoMaterial / cantidad)}</td>
+                </tr>
+                <tr>
+                  <td className="py-2 text-gray-600">Diseño</td>
+                  <td className="text-right font-medium">{formatCurrency(resultado.costoDiseno)}</td>
+                  <td className="text-right text-gray-400">{formatCurrency(resultado.costoDiseno / cantidad)}</td>
+                </tr>
+                <tr>
+                  <td className="py-2 text-gray-600">Utilidad</td>
+                  <td className="text-right font-medium text-emerald-600">{formatCurrency(resultado.utilidadBruta)}</td>
+                  <td className="text-right text-emerald-400">{formatCurrency(resultado.utilidadBruta / cantidad)}</td>
+                </tr>
+                {resultado.descuento > 0 && (
+                  <tr className="text-emerald-600 italic">
+                    <td className="py-2">Descuento por volumen (10%)</td>
+                    <td className="text-right">-{formatCurrency(resultado.descuento)}</td>
+                    <td className="text-right">-{formatCurrency(resultado.descuento / cantidad)}</td>
+                  </tr>
+                )}
+                <tr className="border-t border-gray-200">
+                  <td className="py-2 font-bold text-gray-800">Subtotal</td>
+                  <td className="text-right font-bold text-gray-800">{formatCurrency(resultado.subtotal)}</td>
+                  <td className="text-right font-bold text-gray-800">{formatCurrency(resultado.subtotal / cantidad)}</td>
+                </tr>
+                <tr>
+                  <td className="py-2 text-gray-600">IVA {aplicarIva ? '(16%)' : '(0%)'}</td>
+                  <td className="text-right font-medium">{formatCurrency(resultado.iva)}</td>
+                  <td className="text-right text-gray-400">{formatCurrency(resultado.iva / cantidad)}</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <div className="flex justify-between py-3 px-4 bg-blue-50 rounded-xl mt-4 border border-blue-100">
+            <div>
+              <span className="block font-bold text-gray-800 text-lg">TOTAL</span>
+              <span className="text-xs text-blue-600 font-medium">{cantidad > 1 ? `${cantidad} piezas` : '1 pieza'}</span>
+            </div>
+            <div className="text-right">
+              <span className="block font-bold text-2xl text-blue-600">{formatCurrency(resultado.total)}</span>
+              <span className="text-xs text-blue-500 font-medium">Unitario: {formatCurrency(resultado.precioUnitario)}</span>
             </div>
           </div>
         </div>
@@ -666,7 +729,7 @@ export default function Cotizador({ config, user, loadedQuote, onQuoteLoaded }: 
             {veta && <li className="flex gap-2"><Info className="text-blue-500 shrink-0" size={16} /> Dirección de veta activa. Merma incrementada.</li>}
             {urgencia > 1 && <li className="flex gap-2"><Clock className="text-orange-500 shrink-0" size={16} /> Tarifa de urgencia aplicada.</li>}
             {resultado.hojasNecesarias > 1 && <li className="flex gap-2"><Layers className="text-purple-500 shrink-0" size={16} /> {resultado.hojasNecesarias} hojas requeridas. Verificar inventario.</li>}
-            {resultado.proporcionLienzo > 0 && <li className="flex gap-2"><Crop className="text-blue-500 shrink-0" size={16} /> Se cobrará el {(resultado.proporcionLienzo * 100).toFixed(1)}% del material más un 50% extra.</li>}
+            {resultado.panelesPorHoja > 0 && <li className="flex gap-2"><Crop className="text-blue-500 shrink-0" size={16} /> Se cobrará la proporción del área utilizada más un 25% de recargo por el corte.</li>}
             {resultado.aprovechamiento < 50 && <li className="flex gap-2"><AlertTriangle className="text-amber-500 shrink-0" size={16} /> Aprovechamiento bajo. Optimizar nesting.</li>}
           </ul>
         </div>

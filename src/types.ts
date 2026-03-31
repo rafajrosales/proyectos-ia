@@ -28,6 +28,10 @@ export interface DetailedQuoteData {
   subtotal: number;
   iva: number;
   utilidad: number;
+  utilidadBruta: number;
+  precioUnitario: number;
+  descuento: number;
+  subtotalSinDescuento: number;
   material: {
     nombre: string;
     costo: number;
@@ -43,12 +47,15 @@ export interface DetailedQuoteData {
   largo: number;
   anchoCobrar: number;
   largoCobrar: number;
+  areaPanelIndividual: number;
+  areaCobrar: number;
   cantidad: number;
   tiempoTotalMinutos: number;
   hojasNecesarias: number;
   proporcionLienzo: number;
   factorLienzo: number;
   aprovechamiento: number;
+  panelesPorHoja: number;
   costoFijoHora: number;
   costoMaquina: number;
   costoEnergia: number;

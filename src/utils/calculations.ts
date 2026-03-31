@@ -43,17 +43,22 @@ export function calcularCotizacion(
 
   const costoFijoHora = calcularCostoFijoHora(cfg);
   const tiempoConPadding = tiempoSimulado * 1.30;
-  const tiempoTotalMinutos = (tiempoConPadding + setup) * cantidad;
+  const tiempoTotalMinutos = (tiempoConPadding * cantidad) + setup;
   const tiempoTotalHoras = tiempoTotalMinutos / 60;
 
   const areaHoja = lienzo.ancho * lienzo.largo * (lienzo.piezas || 1);
   
-  const anchoCobrar = redondearComercial(ancho, redondeo);
-  const largoCobrar = redondearComercial(largo, redondeo);
-  const areaCobrar = anchoCobrar * largoCobrar * cantidad;
+  // Cálculo basado en centímetros cuadrados (área) no lineales (dimensiones individuales)
+  const areaRealIndividual = ancho * largo;
+  const areaPanelIndividual = redondearComercial(areaRealIndividual, redondeo);
+  const areaCobrar = areaPanelIndividual * cantidad;
 
-  // Solo aplicamos merma extra si se exige respetar la veta (35%).
-  const areaTotalNecesaria = veta ? areaCobrar * 1.35 : areaCobrar;
+  // Para visualización mantenemos los valores originales, ya que el redondeo es sobre el área
+  const anchoCobrar = ancho;
+  const largoCobrar = largo;
+
+  // Aplicamos merma base del 20%, o 35% si se exige respetar la veta.
+  const areaTotalNecesaria = veta ? areaCobrar * 1.35 : areaCobrar * 1.20;
   
   // Proporción del diseño respecto al lienzo completo
   const proporcionLienzo = areaTotalNecesaria / areaHoja;
@@ -61,11 +66,16 @@ export function calcularCotizacion(
   let hojasNecesarias = Math.ceil(proporcionLienzo);
   if (hojasNecesarias < 1) hojasNecesarias = 1;
 
-  // Costo basado en la proporción del lienzo utilizado más un 50% extra
+  const panelesPorHoja = areaHoja / areaPanelIndividual;
+  
+  // Costo basado en la proporción del área utilizada + 25% de recargo por corte
   const factorLienzo = lienzo.factor || 1;
-  const costoMaterialBase = proporcionLienzo * material.costo * factorLienzo;
-  const margenMaterial = costoMaterialBase * 0.5;
-  const costoMaterial = costoMaterialBase + margenMaterial;
+  const costoPanelBase = material.costo / panelesPorHoja;
+  const costoPanelFinal = costoPanelBase * 1.25; // 25% extra por el corte
+  const costoMaterial = costoPanelFinal * cantidad;
+  
+  const costoMaterialBase = costoPanelBase * cantidad;
+  const margenMaterial = costoMaterial - costoMaterialBase;
   const aprovechamiento = Math.min(100, (areaCobrar / areaTotalNecesaria) * 100);
 
   let procesoMultiplier = 1;
@@ -79,43 +89,54 @@ export function calcularCotizacion(
   const costoMaquina = tiempoTotalHoras * costoFijoHora * procesoMultiplier * complejidadMultiplier;
   const costoEnergia = tiempoTotalHoras * 3 * cfg.kwh;
   const costoDiseno = (minutosDiseno / 60) * 100;
+  
   const costoTotalDirecto = costoMaquina + costoEnergia + costoMaterial + costoDiseno;
 
-  let utilidad = costoTotalDirecto * margen;
-  let subtotal = costoTotalDirecto + utilidad;
+  let utilidadBruta = costoTotalDirecto * margen;
+  let subtotalBase = costoTotalDirecto + utilidadBruta;
+  const subtotalSinDescuento = subtotalBase;
+  let descuento = 0;
 
   if (urgencia > 1) {
-    const cargoUrgencia = subtotal * (urgencia - 1);
-    subtotal += cargoUrgencia;
-    utilidad += cargoUrgencia;
+    const cargoUrgencia = subtotalBase * (urgencia - 1);
+    subtotalBase += cargoUrgencia;
+    utilidadBruta += cargoUrgencia;
   }
 
   if (cantidad >= 10) {
-    const descuento = subtotal * 0.10;
-    subtotal -= descuento;
-    utilidad -= descuento;
+    descuento = subtotalBase * 0.10;
   }
 
+  const subtotal = subtotalBase - descuento;
+  const utilidad = subtotal - costoTotalDirecto;
   const iva = aplicarIva ? subtotal * 0.16 : 0;
   const total = subtotal + iva;
+  const precioUnitario = cantidad > 0 ? total / cantidad : 0;
 
   return {
     total,
     subtotal,
     iva,
     utilidad,
+    utilidadBruta,
+    precioUnitario,
+    descuento,
+    subtotalSinDescuento,
     material,
     lienzo,
     ancho,
     largo,
     anchoCobrar,
     largoCobrar,
+    areaPanelIndividual,
+    areaCobrar,
     cantidad,
     tiempoTotalMinutos,
     hojasNecesarias,
     proporcionLienzo,
     factorLienzo,
     aprovechamiento,
+    panelesPorHoja,
     costoFijoHora,
     costoMaquina,
     costoEnergia,
