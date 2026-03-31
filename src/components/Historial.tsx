@@ -156,9 +156,13 @@ export default function Historial({ quotes, user, onLoadQuote }: Props) {
             {quotes.map((quote) => (
               <div key={quote.id} className="bg-white p-5 rounded-xl border border-gray-200 shadow-sm space-y-3">
                 <div className="flex justify-between items-start">
-                  <div>
+                    <div>
                     <p className="font-bold text-gray-800 text-lg">{quote.cliente}</p>
-                    {quote.clienteId && (
+                    {quote.clienteNombre ? (
+                      <p className="text-xs text-indigo-600 font-bold flex items-center gap-1">
+                        <UserIcon size={12} /> Cliente: {quote.clienteNombre}
+                      </p>
+                    ) : quote.clienteId && (
                       <p className="text-xs text-indigo-600 font-medium flex items-center gap-1">
                         <UserIcon size={12} /> Cliente asociado
                       </p>
@@ -194,7 +198,7 @@ export default function Historial({ quotes, user, onLoadQuote }: Props) {
               <thead>
                 <tr className="bg-gray-50 border-b border-gray-200">
                   <th className="px-6 py-4 text-sm font-bold text-gray-700"><div className="flex items-center gap-2"><Calendar size={16} className="text-gray-400" /> Fecha</div></th>
-                  <th className="px-6 py-4 text-sm font-bold text-gray-700"><div className="flex items-center gap-2"><UserIcon size={16} className="text-gray-400" /> Artículo</div></th>
+                  <th className="px-6 py-4 text-sm font-bold text-gray-700"><div className="flex items-center gap-2"><UserIcon size={16} className="text-gray-400" /> Nombre del Artículo</div></th>
                   <th className="px-6 py-4 text-sm font-bold text-gray-700"><div className="flex items-center gap-2"><Layers size={16} className="text-gray-400" /> Material</div></th>
                   <th className="px-6 py-4 text-sm font-bold text-gray-700"><div className="flex items-center gap-2"><DollarSign size={16} className="text-gray-400" /> Total</div></th>
                   <th className="px-6 py-4 text-sm font-bold text-gray-700">Acciones</th>
@@ -206,7 +210,9 @@ export default function Historial({ quotes, user, onLoadQuote }: Props) {
                     <td className="px-6 py-4 text-sm text-gray-600">{new Date(quote.fecha).toLocaleDateString('es-MX')}</td>
                     <td className="px-6 py-4 text-sm text-gray-800 font-medium">
                       {quote.cliente}
-                      {quote.clienteId && (
+                      {quote.clienteNombre ? (
+                        <span className="block text-[10px] text-indigo-600 font-bold uppercase tracking-tighter">Cliente: {quote.clienteNombre}</span>
+                      ) : quote.clienteId && (
                         <span className="block text-[10px] text-indigo-500 font-bold uppercase tracking-tighter">Con Cliente</span>
                       )}
                     </td>

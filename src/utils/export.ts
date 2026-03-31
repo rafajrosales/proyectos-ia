@@ -1,7 +1,7 @@
 import { DetailedQuoteData, Quote } from '../types';
 import jsPDF from 'jspdf';
 
-export function generarPDF(cliente: string, resultado: DetailedQuoteData) {
+export function generarPDF(articulo: string, resultado: DetailedQuoteData, clienteNombre?: string) {
   const doc = new jsPDF();
   
   doc.setFontSize(20);
@@ -18,8 +18,13 @@ export function generarPDF(cliente: string, resultado: DetailedQuoteData) {
 
   doc.setFontSize(11);
   doc.setTextColor(50);
-  doc.text(`Artículo: ${cliente}`, 20, 45);
-  doc.text(`Fecha: ${new Date().toLocaleDateString('es-MX')}`, 20, 52);
+  doc.text(`Nombre del Artículo: ${articulo}`, 20, 45);
+  if (clienteNombre) {
+    doc.text(`Cliente: ${clienteNombre}`, 20, 52);
+    doc.text(`Fecha: ${new Date().toLocaleDateString('es-MX')}`, 20, 59);
+  } else {
+    doc.text(`Fecha: ${new Date().toLocaleDateString('es-MX')}`, 20, 52);
+  }
   doc.text(`Folio: COT-${Date.now().toString().slice(-6)}`, 140, 45);
   doc.text(`Validez: 7 días`, 140, 52);
 
@@ -36,15 +41,15 @@ export function generarPDF(cliente: string, resultado: DetailedQuoteData) {
   const lineHeight = 7;
   
   doc.text(`Material:`, 20, y); doc.text(resultado.material.nombre, 80, y); y += lineHeight;
-  doc.text(`Paneles por Hoja:`, 20, y); doc.text(`${resultado.panelesPorHoja.toFixed(1)}`, 80, y); y += lineHeight;
+  doc.text(`Paneles por Hoja:`, 20, y); doc.text(`${resultado.panelesPorHoja.toFixed(2)}`, 80, y); y += lineHeight;
   doc.text(`Lienzo (Hoja):`, 20, y); doc.text(resultado.lienzo.piezas ? `${resultado.lienzo.piezas} pzas de ${resultado.lienzo.ancho} × ${resultado.lienzo.largo} cm` : `${resultado.lienzo.ancho} × ${resultado.lienzo.largo} cm`, 80, y); y += lineHeight;
   doc.text(`Dimensiones Diseño:`, 20, y); doc.text(`${resultado.ancho} × ${resultado.largo} cm`, 80, y); y += lineHeight;
-  doc.text(`Área a Cobrar:`, 20, y); doc.text(`${resultado.areaPanelIndividual.toLocaleString()} cm²`, 80, y); y += lineHeight;
+  doc.text(`Área a Cobrar:`, 20, y); doc.text(`${resultado.areaPanelIndividual.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} cm²`, 80, y); y += lineHeight;
   doc.text(`Cantidad:`, 20, y); doc.text(`${resultado.cantidad}`, 80, y); y += lineHeight;
   doc.text(`Hoja(s) a Utilizar:`, 20, y); doc.text(`${resultado.hojasNecesarias}`, 80, y); y += lineHeight;
-  doc.text(`Proporción Lienzo:`, 20, y); doc.text(`${(resultado.proporcionLienzo * 100).toFixed(1)}%`, 80, y); y += lineHeight;
-  doc.text(`Tiempo Estimado:`, 20, y); doc.text(`${Math.round(resultado.tiempoTotalMinutos)} minutos`, 80, y); y += lineHeight;
-  doc.text(`Aprovechamiento:`, 20, y); doc.text(`${resultado.aprovechamiento.toFixed(1)}%`, 80, y); y += lineHeight;
+  doc.text(`Proporción Lienzo:`, 20, y); doc.text(`${(resultado.proporcionLienzo * 100).toFixed(2)}%`, 80, y); y += lineHeight;
+  doc.text(`Tiempo Estimado:`, 20, y); doc.text(`${resultado.tiempoTotalMinutos.toFixed(2)} minutos`, 80, y); y += lineHeight;
+  doc.text(`Aprovechamiento:`, 20, y); doc.text(`${resultado.aprovechamiento.toFixed(2)}%`, 80, y); y += lineHeight;
 
   y += 10;
   doc.setFontSize(14);
@@ -77,15 +82,15 @@ export function generarPDF(cliente: string, resultado: DetailedQuoteData) {
     doc.text(splitNotas, 20, y + 5);
   }
 
-  doc.save(`Cotizacion_${cliente.replace(/\s+/g, '_')}_${Date.now()}.pdf`);
+  doc.save(`Cotizacion_${articulo.replace(/\s+/g, '_')}_${Date.now()}.pdf`);
 }
 
 export function exportarCSV(historial: Quote[]) {
   if (historial.length === 0) return;
   
-  let csv = 'Fecha,Artículo,Material,Lienzo,Total (MXN)\n';
+  let csv = 'Fecha,Nombre del Artículo,Cliente,Material,Lienzo,Total (MXN)\n';
   historial.forEach(cot => {
-    csv += `${new Date(cot.fecha).toLocaleDateString('es-MX')},"${cot.cliente}","${cot.material}","${cot.lienzo}",$${cot.total.toFixed(2)}\n`;
+    csv += `${new Date(cot.fecha).toLocaleDateString('es-MX')},"${cot.cliente}","${cot.clienteNombre || ''}","${cot.material}","${cot.lienzo}",$${cot.total.toFixed(2)}\n`;
   });
   
   const blob = new Blob([csv], {type: 'text/csv;charset=utf-8;'});

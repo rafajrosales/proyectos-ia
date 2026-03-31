@@ -2,9 +2,9 @@ import React, { useState, useEffect } from 'react';
 import { db } from '../firebase';
 import { collection, addDoc, updateDoc, deleteDoc, doc, onSnapshot, query, orderBy } from 'firebase/firestore';
 import { User } from 'firebase/auth';
-import { Pedido, PedidoStatus, OperationType, Cliente } from '../types';
+import { Pedido, PedidoStatus, OperationType, Cliente, Quote } from '../types';
 import { handleFirestoreError } from '../utils/errorHandler';
-import { Package, Calendar, User as UserIcon, DollarSign, Tag, Clock, CheckCircle, Truck, XCircle, AlertCircle, Search, Edit2, Trash2, X, Save, FileText, Plus } from 'lucide-react';
+import { Package, Calendar, User as UserIcon, DollarSign, Tag, Clock, CheckCircle, Truck, XCircle, AlertCircle, Search, Edit2, Trash2, X, Save, FileText, Plus, List } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 interface Props {
@@ -14,6 +14,7 @@ interface Props {
 export default function Pedidos({ user }: Props) {
   const [pedidos, setPedidos] = useState<Pedido[]>([]);
   const [clientes, setClientes] = useState<Cliente[]>([]);
+  const [quotes, setQuotes] = useState<Quote[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -26,14 +27,17 @@ export default function Pedidos({ user }: Props) {
   const [status, setStatus] = useState<PedidoStatus>(PedidoStatus.PENDIENTE);
   const [fechaEntrega, setFechaEntrega] = useState('');
   const [notas, setNotas] = useState('');
+  const [quoteId, setQuoteId] = useState('');
 
   useEffect(() => {
-    const qPedidos = query(collection(db, `users/${user.uid}/pedidos`), orderBy('fecha', 'desc'));
+    const qPedidos = collection(db, `users/${user.uid}/pedidos`);
     const unsubPedidos = onSnapshot(qPedidos, (snapshot) => {
       const loaded: Pedido[] = [];
       snapshot.forEach((doc) => {
         loaded.push({ id: doc.id, ...doc.data() } as Pedido);
       });
+      // Sort in memory to handle documents missing the 'fecha' field
+      loaded.sort((a, b) => new Date(b.fecha || 0).getTime() - new Date(a.fecha || 0).getTime());
       setPedidos(loaded);
       setLoading(false);
     }, (error) => {
@@ -50,9 +54,19 @@ export default function Pedidos({ user }: Props) {
       setClientes(loaded);
     });
 
+    const qQuotes = query(collection(db, `users/${user.uid}/quotes`), orderBy('fecha', 'desc'));
+    const unsubQuotes = onSnapshot(qQuotes, (snapshot) => {
+      const loaded: Quote[] = [];
+      snapshot.forEach((doc) => {
+        loaded.push({ id: doc.id, ...doc.data() } as Quote);
+      });
+      setQuotes(loaded);
+    });
+
     return () => {
       unsubPedidos();
       unsubClientes();
+      unsubQuotes();
     };
   }, [user.uid]);
 
@@ -65,6 +79,7 @@ export default function Pedidos({ user }: Props) {
       setStatus(pedido.status);
       setFechaEntrega(pedido.fechaEntrega || '');
       setNotas(pedido.notas || '');
+      setQuoteId(pedido.quoteId || '');
     } else {
       setEditingPedido(null);
       setClienteId('');
@@ -73,8 +88,23 @@ export default function Pedidos({ user }: Props) {
       setStatus(PedidoStatus.PENDIENTE);
       setFechaEntrega('');
       setNotas('');
+      setQuoteId('');
     }
     setIsModalOpen(true);
+  };
+
+  const handleSelectQuote = (id: string) => {
+    const quote = quotes.find(q => q.id === id);
+    if (quote) {
+      setQuoteId(id);
+      setArticuloNombre(quote.cliente); // quote.cliente is the article name
+      setTotal(Math.round(quote.total));
+      if (quote.clienteId) {
+        setClienteId(quote.clienteId);
+      }
+    } else {
+      setQuoteId('');
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -93,11 +123,12 @@ export default function Pedidos({ user }: Props) {
       clienteId,
       clienteNombre: selectedCliente.nombre,
       articuloNombre,
-      total,
+      total: Math.round(total),
       status,
       fechaEntrega,
       notas,
-      datosQuote: editingPedido ? editingPedido.datosQuote : '{}'
+      quoteId: quoteId || undefined,
+      datosQuote: editingPedido?.datosQuote || (quoteId ? (quotes.find(q => q.id === quoteId)?.datos || '') : '')
     };
 
     try {
@@ -147,11 +178,16 @@ export default function Pedidos({ user }: Props) {
     }
   };
 
-  const filteredPedidos = pedidos.filter(p => 
-    p.clienteNombre.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    p.articuloNombre.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    p.status.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const filteredPedidos = pedidos.filter(p => {
+    const clienteNombre = p.clienteNombre || '';
+    const articuloNombre = p.articuloNombre || '';
+    const status = p.status || '';
+    const search = searchTerm.toLowerCase();
+    
+    return clienteNombre.toLowerCase().includes(search) ||
+           articuloNombre.toLowerCase().includes(search) ||
+           status.toLowerCase().includes(search);
+  });
 
   return (
     <div className="space-y-6 animate-fade-in">
@@ -205,10 +241,16 @@ export default function Pedidos({ user }: Props) {
                     {getStatusIcon(pedido.status)}
                   </div>
                   <div>
-                    <h3 className="font-bold text-gray-900 text-lg">{pedido.articuloNombre}</h3>
+                    <h3 className="font-bold text-gray-900 text-lg">{pedido.articuloNombre || 'Sin nombre'}</h3>
                     <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-gray-500 mt-1">
-                      <span className="flex items-center gap-1"><UserIcon size={14} /> {pedido.clienteNombre}</span>
-                      <span className="flex items-center gap-1"><Calendar size={14} /> {new Date(pedido.fecha).toLocaleDateString('es-MX')}</span>
+                      <span className="flex items-center gap-1">
+                        <UserIcon size={14} /> 
+                        {pedido.clienteNombre || clientes.find(c => c.id === pedido.clienteId)?.nombre || 'Cliente desconocido'}
+                      </span>
+                      <span className="flex items-center gap-1">
+                        <Calendar size={14} /> 
+                        {pedido.fecha ? new Date(pedido.fecha).toLocaleDateString('es-MX') : 'Sin fecha'}
+                      </span>
                       {pedido.fechaEntrega && (
                         <span className="flex items-center gap-1 text-indigo-600 font-medium">
                           <Clock size={14} /> Entrega: {new Date(pedido.fechaEntrega).toLocaleDateString('es-MX')}
@@ -221,7 +263,7 @@ export default function Pedidos({ user }: Props) {
                 <div className="flex items-center justify-between md:justify-end gap-6">
                   <div className="text-right">
                     <p className="text-xs font-bold text-gray-400 uppercase tracking-wider">Total</p>
-                    <p className="text-xl font-black text-gray-900">${pedido.total.toLocaleString('es-MX', { minimumFractionDigits: 2 })}</p>
+                    <p className="text-xl font-black text-gray-900">${pedido.total.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
                   </div>
                   
                   <div className="flex gap-2">
@@ -269,6 +311,29 @@ export default function Pedidos({ user }: Props) {
             </div>
             
             <form onSubmit={handleSubmit} className="p-6 space-y-4 max-h-[80vh] overflow-y-auto">
+              {!editingPedido && (
+                <div className="bg-indigo-50 p-4 rounded-xl border border-indigo-100 mb-2">
+                  <label className="block text-xs font-bold text-indigo-600 uppercase tracking-wider mb-2 flex items-center gap-2">
+                    <List size={14} /> Seleccionar de Cotización (Opcional)
+                  </label>
+                  <select 
+                    value={quoteId} 
+                    onChange={(e) => handleSelectQuote(e.target.value)} 
+                    className="w-full px-3 py-2 border border-indigo-200 rounded-lg focus:ring-2 focus:ring-indigo-500 bg-white text-sm"
+                  >
+                    <option value="">-- Manual (Sin Cotización) --</option>
+                    {quotes.map(q => (
+                      <option key={q.id} value={q.id}>
+                        {new Date(q.fecha).toLocaleDateString('es-MX')} - {q.cliente} (${q.total.toFixed(2)})
+                      </option>
+                    ))}
+                  </select>
+                  <p className="text-[10px] text-indigo-500 mt-1.5 leading-tight">
+                    Al seleccionar una cotización, se cargarán automáticamente el nombre del artículo, el total y el cliente asociado.
+                  </p>
+                </div>
+              )}
+              
               <div>
                 <label className="block text-sm font-semibold text-gray-700 mb-1">Cliente *</label>
                 <select 
@@ -307,8 +372,7 @@ export default function Pedidos({ user }: Props) {
                     <input 
                       type="number" 
                       value={total}
-                      onChange={(e) => setTotal(Number(e.target.value))}
-                      step="0.01"
+                      onChange={(e) => setTotal(Math.round(Number(e.target.value)))}
                       className="w-full pl-10 pr-4 py-2.5 border border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none"
                       required
                     />

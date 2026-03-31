@@ -311,7 +311,7 @@ export default function Cotizador({ config, user, loadedQuote, onQuoteLoaded }: 
         clienteNombre: selectedCliente.nombre,
         quoteId: currentQuoteId || undefined,
         articuloNombre: cliente.trim() || 'Sin nombre',
-        total: resultado.total,
+        total: Math.round(resultado.total),
         status: PedidoStatus.PENDIENTE,
         datosQuote: JSON.stringify(resultado),
         notas: notas
@@ -340,7 +340,7 @@ export default function Cotizador({ config, user, loadedQuote, onQuoteLoaded }: 
   };
 
   const formatCurrency = (num: number) => `$${num.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-  const formatNumber = (num: number) => num.toLocaleString('es-MX', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
+  const formatNumber = (num: number) => num.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
   if (!resultado) return null;
 
@@ -662,7 +662,7 @@ export default function Cotizador({ config, user, loadedQuote, onQuoteLoaded }: 
               <span className="text-gray-400">Material:</span> <span className="font-semibold">{resultado.material.nombre}</span>
             </div>
             <div className="flex justify-between border-b border-gray-700 pb-2">
-              <span className="text-gray-400">Paneles por Hoja:</span> <span className="font-semibold">{resultado.panelesPorHoja.toFixed(1)}</span>
+              <span className="text-gray-400">Paneles por Hoja:</span> <span className="font-semibold">{resultado.panelesPorHoja.toFixed(2)}</span>
             </div>
             <div className="flex justify-between border-b border-gray-700 pb-2">
               <span className="text-gray-400">Lienzo:</span> <span className="font-semibold">{resultado.lienzo.ancho}x{resultado.lienzo.largo}</span>
@@ -671,13 +671,13 @@ export default function Cotizador({ config, user, loadedQuote, onQuoteLoaded }: 
               <span className="text-gray-400">Área Cobrable:</span> <span className="font-semibold">{formatNumber(resultado.areaPanelIndividual)} cm² {cantidad > 1 ? `(Total: ${formatNumber(resultado.areaCobrar)} cm²)` : ''}</span>
             </div>
             <div className="flex justify-between border-b border-gray-700 pb-2">
-              <span className="text-gray-400">Tiempo Real:</span> <span className="font-semibold">{Math.round(resultado.tiempoTotalMinutos)} min</span>
+              <span className="text-gray-400">Tiempo Real:</span> <span className="font-semibold">{resultado.tiempoTotalMinutos.toFixed(2)} min</span>
             </div>
             <div className="flex justify-between border-b border-gray-700 pb-2">
               <span className="text-gray-400">Precio Unitario:</span> <span className="font-semibold text-blue-400">{formatCurrency(resultado.precioUnitario)}</span>
             </div>
             <div className="flex justify-between pt-1">
-              <span className="text-gray-400">Aprovechamiento:</span> <span className="font-semibold text-emerald-400">{resultado.aprovechamiento.toFixed(1)}%</span>
+              <span className="text-gray-400">Aprovechamiento:</span> <span className="font-semibold text-emerald-400">{resultado.aprovechamiento.toFixed(2)}%</span>
             </div>
           </div>
         </div>
@@ -794,7 +794,13 @@ export default function Cotizador({ config, user, loadedQuote, onQuoteLoaded }: 
             </div>
           )}
           <div className="grid grid-cols-2 gap-3">
-            <button onClick={() => generarPDF(cliente || 'Artículo', resultado)} className="flex items-center justify-center gap-2 bg-red-600 hover:bg-red-700 text-white font-semibold py-3 rounded-xl shadow-sm transition-colors">
+            <button 
+              onClick={() => {
+                const selectedCliente = clientes.find(c => c.id === clienteId);
+                generarPDF(cliente || 'Artículo', resultado, selectedCliente?.nombre);
+              }} 
+              className="flex items-center justify-center gap-2 bg-red-600 hover:bg-red-700 text-white font-semibold py-3 rounded-xl shadow-sm transition-colors"
+            >
               <FileText size={18} /> PDF
             </button>
             <button onClick={() => exportarJSON(resultado, `Cotizacion_${cliente || 'Artículo'}_${Date.now()}.json`)} className="flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 rounded-xl shadow-sm transition-colors">
