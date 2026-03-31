@@ -607,7 +607,7 @@ export default function Cotizador({ config, user, loadedQuote, onQuoteLoaded }: 
           <div className="space-y-2 text-sm">
             <div className="flex justify-between py-1"><span className="text-gray-500">Costo Fijo Hora</span> <span className="font-medium">{formatCurrency(resultado.costoFijoHora)}</span></div>
             <div className="flex justify-between py-1"><span className="text-gray-500">Mano de Obra</span> <span className="font-medium">{formatCurrency(resultado.costoMaquina + resultado.costoEnergia)}</span></div>
-            <div className="flex justify-between py-1"><span className="text-gray-500">Material Base ({(resultado.proporcionLienzo * 100).toFixed(1)}%)</span> <span className="font-medium">{formatCurrency(resultado.costoMaterialBase)}</span></div>
+            <div className="flex justify-between py-1"><span className="text-gray-500">Material Base ({(resultado.proporcionLienzo * 100).toFixed(1)}%{resultado.factorLienzo > 1 ? ` × ${resultado.factorLienzo}` : ''})</span> <span className="font-medium">{formatCurrency(resultado.costoMaterialBase)}</span></div>
             <div className="flex justify-between py-1"><span className="text-gray-500">Margen Material (50%)</span> <span className="font-medium">{formatCurrency(resultado.margenMaterial)}</span></div>
             <div className="flex justify-between py-1 bg-gray-50 px-2 -mx-2 rounded"><span className="text-gray-700 font-medium">Total Material</span> <span className="font-semibold text-gray-900">{formatCurrency(resultado.costoMaterial)}</span></div>
             <div className="flex justify-between py-1"><span className="text-gray-500">Diseño</span> <span className="font-medium">{formatCurrency(resultado.costoDiseno)}</span></div>

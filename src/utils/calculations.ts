@@ -114,6 +114,7 @@ export function calcularCotizacion(
     tiempoTotalMinutos,
     hojasNecesarias,
     proporcionLienzo,
+    factorLienzo,
     aprovechamiento,
     costoFijoHora,
     costoMaquina,

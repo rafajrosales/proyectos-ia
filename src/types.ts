@@ -37,6 +37,7 @@ export interface DetailedQuoteData {
     largo: number;
     nombre: string;
     piezas?: number;
+    factor?: number;
   };
   ancho: number;
   largo: number;
@@ -46,6 +47,7 @@ export interface DetailedQuoteData {
   tiempoTotalMinutos: number;
   hojasNecesarias: number;
   proporcionLienzo: number;
+  factorLienzo: number;
   aprovechamiento: number;
   costoFijoHora: number;
   costoMaquina: number;
