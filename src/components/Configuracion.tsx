@@ -129,7 +129,8 @@ function ConfigInput({ icon, label, value, onChange, desc, color, step = 1 }: an
         type="number"
         value={value}
         step={step}
-        onChange={(e) => onChange(Number(e.target.value))}
+        onFocus={(e) => e.target.select()}
+        onChange={(e) => onChange(e.target.value === '' ? 0 : Number(e.target.value))}
         className="w-full px-4 py-3 border-2 border-white rounded-lg font-semibold text-lg bg-white shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20"
       />
       <p className="text-xs text-gray-500 mt-2">{desc}</p>

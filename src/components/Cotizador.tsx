@@ -6,7 +6,7 @@ import { db } from '../firebase';
 import { collection, addDoc, doc, updateDoc, deleteDoc } from 'firebase/firestore';
 import { User } from 'firebase/auth';
 import { handleFirestoreError } from '../utils/errorHandler';
-import { Layers, Maximize, Crop, Clock, Tags, Calculator, FileText, Save, Download, FileSpreadsheet, Lightbulb, CheckCircle, AlertTriangle, Info, Copy, Trash2, Plus, Upload, Image as ImageIcon, FileArchive } from 'lucide-react';
+import { Layers, Maximize, Crop, Clock, Tags, Calculator, FileText, Save, Download, FileSpreadsheet, Lightbulb, CheckCircle, AlertTriangle, Info, Copy, Trash2, Plus, Upload, Image as ImageIcon, FileArchive, Camera } from 'lucide-react';
 import toast from 'react-hot-toast';
 import ConfirmModal from './ConfirmModal';
 
@@ -348,11 +348,11 @@ export default function Cotizador({ config, user, loadedQuote, onQuoteLoaded }: 
             <div className="mt-4 grid grid-cols-2 gap-3 p-4 bg-gray-50 rounded-xl border-2 border-dashed border-gray-300">
               <div>
                 <label className="block text-xs font-semibold text-gray-700 mb-1">Ancho (cm)</label>
-                <input type="number" value={customLienzo.ancho} onChange={(e) => setCustomLienzo({...customLienzo, ancho: Number(e.target.value)})} className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500" />
+                <input type="number" value={customLienzo.ancho} onFocus={(e) => e.target.select()} onChange={(e) => setCustomLienzo({...customLienzo, ancho: e.target.value === '' ? 0 : Number(e.target.value)})} className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500" />
               </div>
               <div>
                 <label className="block text-xs font-semibold text-gray-700 mb-1">Largo (cm)</label>
-                <input type="number" value={customLienzo.largo} onChange={(e) => setCustomLienzo({...customLienzo, largo: Number(e.target.value)})} className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500" />
+                <input type="number" value={customLienzo.largo} onFocus={(e) => e.target.select()} onChange={(e) => setCustomLienzo({...customLienzo, largo: e.target.value === '' ? 0 : Number(e.target.value)})} className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500" />
               </div>
             </div>
           )}
@@ -369,15 +369,15 @@ export default function Cotizador({ config, user, loadedQuote, onQuoteLoaded }: 
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             <div>
               <label className="block text-xs font-semibold text-gray-700 mb-1">Ancho (cm)</label>
-              <input type="number" value={ancho} onChange={(e) => setAncho(Number(e.target.value))} className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500" />
+              <input type="number" value={ancho} onFocus={(e) => e.target.select()} onChange={(e) => setAncho(e.target.value === '' ? 0 : Number(e.target.value))} className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500" />
             </div>
             <div>
               <label className="block text-xs font-semibold text-gray-700 mb-1">Largo (cm)</label>
-              <input type="number" value={largo} onChange={(e) => setLargo(Number(e.target.value))} className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500" />
+              <input type="number" value={largo} onFocus={(e) => e.target.select()} onChange={(e) => setLargo(e.target.value === '' ? 0 : Number(e.target.value))} className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500" />
             </div>
             <div>
               <label className="block text-xs font-semibold text-gray-700 mb-1">Cantidad</label>
-              <input type="number" value={cantidad} min="0.1" step="any" onChange={(e) => setCantidad(Number(e.target.value))} className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500" />
+              <input type="number" value={cantidad} min="0.1" step="any" onFocus={(e) => e.target.select()} onChange={(e) => setCantidad(e.target.value === '' ? 0 : Number(e.target.value))} className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500" />
             </div>
             <div>
               <label className="block text-xs font-semibold text-gray-700 mb-1">Redondeo</label>
@@ -402,19 +402,19 @@ export default function Cotizador({ config, user, loadedQuote, onQuoteLoaded }: 
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             <div>
               <label className="block text-xs font-semibold text-gray-700 mb-1">Corte (min)</label>
-              <input type="number" value={tiempoSimulado} onChange={(e) => setTiempoSimulado(Number(e.target.value))} className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500" />
+              <input type="number" value={tiempoSimulado} onFocus={(e) => e.target.select()} onChange={(e) => setTiempoSimulado(e.target.value === '' ? 0 : Number(e.target.value))} className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500" />
             </div>
             <div>
               <label className="block text-xs font-semibold text-gray-700 mb-1">Setup (min)</label>
-              <input type="number" value={setup} onChange={(e) => setSetup(Number(e.target.value))} className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500" />
+              <input type="number" value={setup} onFocus={(e) => e.target.select()} onChange={(e) => setSetup(e.target.value === '' ? 0 : Number(e.target.value))} className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500" />
             </div>
             <div>
               <label className="block text-xs font-semibold text-gray-700 mb-1">Diseño (min)</label>
-              <input type="number" value={minutosDiseno} onChange={(e) => setMinutosDiseno(Number(e.target.value))} className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500" />
+              <input type="number" value={minutosDiseno} onFocus={(e) => e.target.select()} onChange={(e) => setMinutosDiseno(e.target.value === '' ? 0 : Number(e.target.value))} className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500" />
             </div>
             <div>
-              <label className="block text-xs font-semibold text-gray-700 mb-1">Paneles</label>
-              <input type="number" value={resultado.panelesNecesarios} readOnly className="w-full px-4 py-2 border border-gray-200 bg-gray-100 rounded-lg text-gray-600" />
+              <label className="block text-xs font-semibold text-gray-700 mb-1">Proporción Lienzo</label>
+              <input type="text" value={`${(resultado.proporcionLienzo * 100).toFixed(1)}%`} readOnly className="w-full px-4 py-2 border border-gray-200 bg-gray-100 rounded-lg text-gray-600" />
             </div>
           </div>
           <div className="mt-4 flex flex-col gap-4">
@@ -502,21 +502,41 @@ export default function Cotizador({ config, user, loadedQuote, onQuoteLoaded }: 
             <div className="border-2 border-dashed border-gray-300 rounded-xl p-4 flex flex-col items-center justify-center text-center hover:bg-gray-50 transition-colors">
               <ImageIcon className="text-gray-400 mb-2" size={32} />
               <p className="text-sm font-semibold text-gray-700 mb-1">Foto del Trabajo</p>
-              <p className="text-xs text-gray-500 mb-3">Sube una imagen de referencia</p>
-              <input 
-                type="file" 
-                accept="image/*" 
-                className="hidden" 
-                id="foto-upload"
-                onChange={(e) => {
-                  if (e.target.files && e.target.files[0]) {
-                    setFotoFile(e.target.files[0]);
-                  }
-                }}
-              />
-              <label htmlFor="foto-upload" className="cursor-pointer bg-white border border-gray-300 text-gray-700 px-4 py-2 rounded-lg text-sm font-medium hover:bg-gray-50">
-                Seleccionar Imagen
-              </label>
+              <p className="text-xs text-gray-500 mb-3">Sube una imagen o usa la cámara</p>
+              
+              <div className="flex gap-2">
+                <input 
+                  type="file" 
+                  accept="image/*" 
+                  className="hidden" 
+                  id="foto-upload"
+                  onChange={(e) => {
+                    if (e.target.files && e.target.files[0]) {
+                      setFotoFile(e.target.files[0]);
+                    }
+                  }}
+                />
+                <label htmlFor="foto-upload" className="cursor-pointer bg-white border border-gray-300 text-gray-700 px-3 py-2 rounded-lg text-sm font-medium hover:bg-gray-50 flex items-center gap-1">
+                  <Upload size={16} /> Subir
+                </label>
+
+                <input 
+                  type="file" 
+                  accept="image/*" 
+                  capture="environment"
+                  className="hidden" 
+                  id="foto-camera"
+                  onChange={(e) => {
+                    if (e.target.files && e.target.files[0]) {
+                      setFotoFile(e.target.files[0]);
+                    }
+                  }}
+                />
+                <label htmlFor="foto-camera" className="cursor-pointer bg-white border border-gray-300 text-gray-700 px-3 py-2 rounded-lg text-sm font-medium hover:bg-gray-50 flex items-center gap-1">
+                  <Camera size={16} /> Cámara
+                </label>
+              </div>
+
               {fotoFile && <p className="text-xs text-emerald-600 mt-2 font-medium truncate w-full px-2">{fotoFile.name}</p>}
               {!fotoFile && fotoUrl && (
                 <a href={fotoUrl} target="_blank" rel="noopener noreferrer" className="text-xs text-blue-600 mt-2 font-medium hover:underline">
@@ -564,7 +584,7 @@ export default function Cotizador({ config, user, loadedQuote, onQuoteLoaded }: 
               <span className="text-gray-400">Material:</span> <span className="font-semibold">{resultado.material.nombre}</span>
             </div>
             <div className="flex justify-between border-b border-gray-700 pb-2">
-              <span className="text-gray-400">Paneles (40x40):</span> <span className="font-semibold">{resultado.panelesNecesarios}</span>
+              <span className="text-gray-400">Proporción Lienzo:</span> <span className="font-semibold">{(resultado.proporcionLienzo * 100).toFixed(1)}%</span>
             </div>
             <div className="flex justify-between border-b border-gray-700 pb-2">
               <span className="text-gray-400">Lienzo:</span> <span className="font-semibold">{resultado.lienzo.ancho}x{resultado.lienzo.largo}</span>
@@ -587,7 +607,7 @@ export default function Cotizador({ config, user, loadedQuote, onQuoteLoaded }: 
           <div className="space-y-2 text-sm">
             <div className="flex justify-between py-1"><span className="text-gray-500">Costo Fijo Hora</span> <span className="font-medium">{formatCurrency(resultado.costoFijoHora)}</span></div>
             <div className="flex justify-between py-1"><span className="text-gray-500">Mano de Obra</span> <span className="font-medium">{formatCurrency(resultado.costoMaquina + resultado.costoEnergia)}</span></div>
-            <div className="flex justify-between py-1"><span className="text-gray-500">Material</span> <span className="font-medium">{formatCurrency(resultado.costoMaterial)}</span></div>
+            <div className="flex justify-between py-1"><span className="text-gray-500">Material ({(resultado.proporcionLienzo * 100).toFixed(1)}% + 50% extra)</span> <span className="font-medium">{formatCurrency(resultado.costoMaterial)}</span></div>
             <div className="flex justify-between py-1"><span className="text-gray-500">Diseño</span> <span className="font-medium">{formatCurrency(resultado.costoDiseno)}</span></div>
             <div className="flex justify-between py-1 border-b border-gray-100 pb-2"><span className="text-gray-500">Utilidad</span> <span className="font-medium text-emerald-600">{formatCurrency(resultado.utilidad)}</span></div>
             <div className="flex justify-between py-1"><span className="text-gray-500">Subtotal</span> <span className="font-medium">{formatCurrency(resultado.subtotal)}</span></div>
@@ -644,7 +664,7 @@ export default function Cotizador({ config, user, loadedQuote, onQuoteLoaded }: 
             {veta && <li className="flex gap-2"><Info className="text-blue-500 shrink-0" size={16} /> Dirección de veta activa. Merma incrementada.</li>}
             {urgencia > 1 && <li className="flex gap-2"><Clock className="text-orange-500 shrink-0" size={16} /> Tarifa de urgencia aplicada.</li>}
             {resultado.hojasNecesarias > 1 && <li className="flex gap-2"><Layers className="text-purple-500 shrink-0" size={16} /> {resultado.hojasNecesarias} hojas requeridas. Verificar inventario.</li>}
-            {resultado.panelesNecesarios > 0 && <li className="flex gap-2"><Crop className="text-blue-500 shrink-0" size={16} /> Se cobrarán {resultado.panelesNecesarios} paneles de 40x40cm.</li>}
+            {resultado.proporcionLienzo > 0 && <li className="flex gap-2"><Crop className="text-blue-500 shrink-0" size={16} /> Se cobrará el {(resultado.proporcionLienzo * 100).toFixed(1)}% del material más un 50% extra.</li>}
             {resultado.aprovechamiento < 50 && <li className="flex gap-2"><AlertTriangle className="text-amber-500 shrink-0" size={16} /> Aprovechamiento bajo. Optimizar nesting.</li>}
           </ul>
         </div>

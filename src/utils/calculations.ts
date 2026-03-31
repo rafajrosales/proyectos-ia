@@ -33,13 +33,13 @@ export function calcularCotizacion(
   aplicarIva: boolean,
   notas?: string
 ): DetailedQuoteData {
-  const materialBase = MATERIALES[materialKey];
+  const materialBase = MATERIALES[materialKey] || MATERIALES['mdf3'];
   const material = {
     ...materialBase,
     costo: cfg.materiales?.[materialKey] ?? materialBase.costo
   };
 
-  const lienzo = lienzoKey === 'custom' ? { ...customLienzo, nombre: 'Personalizado' } : LIENZOS[lienzoKey];
+  const lienzo = lienzoKey === 'custom' ? { ...customLienzo, nombre: 'Personalizado' } : (LIENZOS[lienzoKey] || LIENZOS['std120x240']);
 
   const costoFijoHora = calcularCostoFijoHora(cfg);
   const tiempoConPadding = tiempoSimulado * 1.30;
@@ -52,23 +52,18 @@ export function calcularCotizacion(
   const largoCobrar = redondearComercial(largo, redondeo);
   const areaCobrar = anchoCobrar * largoCobrar * cantidad;
 
-  // El precio de la hoja se divide en 18 paneles (cortes de 40x40cm = 1600cm2)
-  const areaPanel = 40 * 40; // 1600 cm2
-  const precioPorPanel = material.costo / 18;
-  
-  // Al cobrar por paneles completos, el desperdicio ya se absorbe al redondear hacia arriba.
   // Solo aplicamos merma extra si se exige respetar la veta (35%).
-  const areaParaPaneles = veta ? areaCobrar * 1.35 : areaCobrar;
+  const areaTotalNecesaria = veta ? areaCobrar * 1.35 : areaCobrar;
   
-  let panelesNecesarios = Math.ceil(areaParaPaneles / areaPanel);
-  if (panelesNecesarios < 1) panelesNecesarios = 1;
+  // Proporción del diseño respecto al lienzo completo
+  const proporcionLienzo = areaTotalNecesaria / areaHoja;
 
-  let hojasNecesarias = Math.ceil(areaParaPaneles / areaHoja);
+  let hojasNecesarias = Math.ceil(proporcionLienzo);
   if (hojasNecesarias < 1) hojasNecesarias = 1;
 
-  // Costo basado en los paneles de 40x40 utilizados
-  const costoMaterial = panelesNecesarios * precioPorPanel;
-  const aprovechamiento = Math.min(100, (areaCobrar / (panelesNecesarios * areaPanel)) * 100);
+  // Costo basado en la proporción del lienzo utilizado más un 50% extra
+  const costoMaterial = proporcionLienzo * material.costo * 1.5;
+  const aprovechamiento = Math.min(100, (areaCobrar / areaTotalNecesaria) * 100);
 
   let procesoMultiplier = 1;
   if (proceso === 'grabado') procesoMultiplier = 1.5;
@@ -115,7 +110,7 @@ export function calcularCotizacion(
     cantidad,
     tiempoTotalMinutos,
     hojasNecesarias,
-    panelesNecesarios,
+    proporcionLienzo,
     aprovechamiento,
     costoFijoHora,
     costoMaquina,

@@ -41,7 +41,7 @@ export function generarPDF(cliente: string, resultado: DetailedQuoteData) {
   doc.text(`Dimensiones a Cobrar:`, 20, y); doc.text(`${resultado.anchoCobrar} × ${resultado.largoCobrar} cm`, 80, y); y += lineHeight;
   doc.text(`Cantidad:`, 20, y); doc.text(`${resultado.cantidad}`, 80, y); y += lineHeight;
   doc.text(`Hoja(s) a Utilizar:`, 20, y); doc.text(`${resultado.hojasNecesarias}`, 80, y); y += lineHeight;
-  doc.text(`Paneles (40x40):`, 20, y); doc.text(`${resultado.panelesNecesarios}`, 80, y); y += lineHeight;
+  doc.text(`Proporción Lienzo:`, 20, y); doc.text(`${(resultado.proporcionLienzo * 100).toFixed(1)}%`, 80, y); y += lineHeight;
   doc.text(`Tiempo Estimado:`, 20, y); doc.text(`${Math.round(resultado.tiempoTotalMinutos)} minutos`, 80, y); y += lineHeight;
   doc.text(`Aprovechamiento:`, 20, y); doc.text(`${resultado.aprovechamiento.toFixed(1)}%`, 80, y); y += lineHeight;
 
@@ -54,6 +54,7 @@ export function generarPDF(cliente: string, resultado: DetailedQuoteData) {
   y += 10;
   doc.setFontSize(11);
   doc.setTextColor(50);
+  doc.text(`Material (${(resultado.proporcionLienzo * 100).toFixed(1)}% + 50% extra):`, 20, y); doc.text(`$${resultado.costoMaterial.toFixed(2)}`, 190, y, { align: 'right' }); y += lineHeight;
   doc.text(`Subtotal:`, 20, y); doc.text(`$${resultado.subtotal.toFixed(2)}`, 190, y, { align: 'right' }); y += lineHeight;
   doc.text(resultado.iva > 0 ? `IVA (16%):` : `IVA (0%):`, 20, y); doc.text(`$${resultado.iva.toFixed(2)}`, 190, y, { align: 'right' }); y += lineHeight;
   

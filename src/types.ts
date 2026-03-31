@@ -44,12 +44,13 @@ export interface DetailedQuoteData {
   cantidad: number;
   tiempoTotalMinutos: number;
   hojasNecesarias: number;
-  panelesNecesarios: number;
+  proporcionLienzo: number;
   aprovechamiento: number;
   costoFijoHora: number;
   costoMaquina: number;
   costoEnergia: number;
   costoMaterial: number;
+  recargoMaterialPequeno: number;
   costoDiseno: number;
   notas?: string;
   fotoUrl?: string;
