@@ -39,6 +39,9 @@ export default function ViewModal({ quote, onClose }: Props) {
             <div>
               <p className="text-sm font-semibold text-gray-500">Artículo</p>
               <p className="text-gray-900 font-medium">{quote.cliente}</p>
+              {quote.clienteNombre && (
+                <p className="text-xs text-indigo-600 font-bold mt-0.5">Cliente: {quote.clienteNombre}</p>
+              )}
             </div>
           </div>
           <div className="flex items-start gap-3">

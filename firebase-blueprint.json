@@ -65,7 +65,15 @@
         },
         "cliente": {
           "type": "string",
-          "description": "Client name."
+          "description": "Article name."
+        },
+        "clienteId": {
+          "type": "string",
+          "description": "Reference to the customer (optional)."
+        },
+        "clienteNombre": {
+          "type": "string",
+          "description": "Customer name (optional)."
         },
         "material": {
           "type": "string",
@@ -122,6 +130,61 @@
         }
       },
       "required": ["uid", "nombre", "createdAt"]
+    },
+    "Pedido": {
+      "title": "Pedido",
+      "description": "An order created from a quote.",
+      "type": "object",
+      "properties": {
+        "uid": {
+          "type": "string",
+          "description": "The user's ID who owns the order."
+        },
+        "fecha": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Order creation date."
+        },
+        "clienteId": {
+          "type": "string",
+          "description": "Reference to the customer."
+        },
+        "clienteNombre": {
+          "type": "string",
+          "description": "Customer name at the time of order."
+        },
+        "quoteId": {
+          "type": "string",
+          "description": "Reference to the original quote."
+        },
+        "articuloNombre": {
+          "type": "string",
+          "description": "Name of the item being produced."
+        },
+        "total": {
+          "type": "number",
+          "description": "Total order value."
+        },
+        "status": {
+          "type": "string",
+          "enum": ["Pendiente", "En Proceso", "Listo para Entrega", "Entregado", "Pagado", "Cancelado"],
+          "description": "Current order status."
+        },
+        "fechaEntrega": {
+          "type": "string",
+          "format": "date",
+          "description": "Expected delivery date."
+        },
+        "notas": {
+          "type": "string",
+          "description": "Order specific notes."
+        },
+        "datosQuote": {
+          "type": "string",
+          "description": "JSON stringified detailed quote data."
+        }
+      },
+      "required": ["uid", "fecha", "clienteId", "clienteNombre", "articuloNombre", "total", "status", "datosQuote"]
     }
   },
   "firestore": {
@@ -142,6 +205,12 @@
         "$ref": "#/entities/Cliente"
       },
       "description": "The user's customers."
+    },
+    "/users/{userId}/pedidos/{pedidoId}": {
+      "schema": {
+        "$ref": "#/entities/Pedido"
+      },
+      "description": "The user's orders."
     }
   }
 }

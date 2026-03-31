@@ -16,7 +16,9 @@ export interface Quote {
   id?: string;
   uid: string;
   fecha: string;
-  cliente: string;
+  cliente: string; // Nombre del artículo
+  clienteId?: string; // ID del cliente (opcional para retrocompatibilidad)
+  clienteNombre?: string; // Nombre del cliente (opcional)
   material: string;
   lienzo: string;
   total: number;
@@ -32,6 +34,30 @@ export interface Cliente {
   empresa?: string;
   notas?: string;
   createdAt: string;
+}
+
+export enum PedidoStatus {
+  PENDIENTE = 'Pendiente',
+  EN_PROCESO = 'En Proceso',
+  LISTO = 'Listo para Entrega',
+  ENTREGADO = 'Entregado',
+  PAGADO = 'Pagado',
+  CANCELADO = 'Cancelado'
+}
+
+export interface Pedido {
+  id?: string;
+  uid: string;
+  fecha: string;
+  clienteId: string;
+  clienteNombre: string;
+  quoteId?: string;
+  articuloNombre: string;
+  total: number;
+  status: PedidoStatus;
+  fechaEntrega?: string;
+  notas?: string;
+  datosQuote: string; // JSON stringified DetailedQuoteData
 }
 
 export interface DetailedQuoteData {

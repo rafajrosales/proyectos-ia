@@ -8,15 +8,16 @@ import Cotizador from './components/Cotizador';
 import Configuracion from './components/Configuracion';
 import Historial from './components/Historial';
 import Clientes from './components/Clientes';
+import Pedidos from './components/Pedidos';
 import Ayuda from './components/Ayuda';
-import { Calculator, Settings, History, HelpCircle, LogOut, Zap, Users } from 'lucide-react';
+import { Calculator, Settings, History, HelpCircle, LogOut, Zap, Users, Package } from 'lucide-react';
 import { Toaster } from 'react-hot-toast';
 
 export default function App() {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const [authError, setAuthError] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<'cotizador' | 'configuracion' | 'historial' | 'clientes' | 'ayuda'>('cotizador');
+  const [activeTab, setActiveTab] = useState<'cotizador' | 'configuracion' | 'historial' | 'clientes' | 'pedidos' | 'ayuda'>('cotizador');
   const [config, setConfig] = useState<UserConfig>(DEFAULT_CONFIG as UserConfig);
   const [quotes, setQuotes] = useState<Quote[]>([]);
   const [loadedQuote, setLoadedQuote] = useState<Quote | null>(null);
@@ -189,6 +190,7 @@ export default function App() {
             </div>
             <div className="flex flex-wrap justify-center gap-2">
               <NavButton active={activeTab === 'cotizador'} onClick={() => setActiveTab('cotizador')} icon={<Calculator size={18} />} label="Cotizador" />
+              <NavButton active={activeTab === 'pedidos'} onClick={() => setActiveTab('pedidos')} icon={<Package size={18} />} label="Pedidos" />
               <NavButton active={activeTab === 'clientes'} onClick={() => setActiveTab('clientes')} icon={<Users size={18} />} label="Clientes" />
               <NavButton active={activeTab === 'configuracion'} onClick={() => setActiveTab('configuracion')} icon={<Settings size={18} />} label="Configuración" />
               <NavButton active={activeTab === 'historial'} onClick={() => setActiveTab('historial')} icon={<History size={18} />} label="Historial" />
@@ -206,6 +208,7 @@ export default function App() {
 
       <main className="container mx-auto px-4 py-8">
         {activeTab === 'cotizador' && <Cotizador config={config} user={user} loadedQuote={loadedQuote} onQuoteLoaded={() => setLoadedQuote(null)} />}
+        {activeTab === 'pedidos' && <Pedidos user={user} />}
         {activeTab === 'clientes' && <Clientes user={user} />}
         {activeTab === 'configuracion' && <Configuracion config={config} user={user} onUpdate={setConfig} />}
         {activeTab === 'historial' && <Historial quotes={quotes} user={user} onLoadQuote={(q) => { setLoadedQuote(q); setActiveTab('cotizador'); }} />}

@@ -158,6 +158,11 @@ export default function Historial({ quotes, user, onLoadQuote }: Props) {
                 <div className="flex justify-between items-start">
                   <div>
                     <p className="font-bold text-gray-800 text-lg">{quote.cliente}</p>
+                    {quote.clienteId && (
+                      <p className="text-xs text-indigo-600 font-medium flex items-center gap-1">
+                        <UserIcon size={12} /> Cliente asociado
+                      </p>
+                    )}
                     <p className="text-sm text-gray-500 flex items-center gap-1 mt-1">
                       <Calendar size={14} /> {new Date(quote.fecha).toLocaleDateString('es-MX')}
                     </p>
@@ -199,7 +204,12 @@ export default function Historial({ quotes, user, onLoadQuote }: Props) {
                 {quotes.map((quote) => (
                   <tr key={quote.id} className="hover:bg-gray-50/50 transition-colors">
                     <td className="px-6 py-4 text-sm text-gray-600">{new Date(quote.fecha).toLocaleDateString('es-MX')}</td>
-                    <td className="px-6 py-4 text-sm text-gray-800 font-medium">{quote.cliente}</td>
+                    <td className="px-6 py-4 text-sm text-gray-800 font-medium">
+                      {quote.cliente}
+                      {quote.clienteId && (
+                        <span className="block text-[10px] text-indigo-500 font-bold uppercase tracking-tighter">Con Cliente</span>
+                      )}
+                    </td>
                     <td className="px-6 py-4 text-sm text-gray-600">{quote.material}</td>
                     <td className="px-6 py-4 text-sm font-bold text-emerald-600">${(Number(quote.total) || 0).toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
                     <td className="px-6 py-4">

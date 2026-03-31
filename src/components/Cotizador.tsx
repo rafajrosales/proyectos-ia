@@ -1,12 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { UserConfig, MATERIALES, LIENZOS, DetailedQuoteData, Quote, OperationType } from '../types';
+import { UserConfig, MATERIALES, LIENZOS, DetailedQuoteData, Quote, OperationType, Cliente, PedidoStatus } from '../types';
 import { calcularCotizacion } from '../utils/calculations';
 import { generarPDF, exportarJSON } from '../utils/export';
 import { db } from '../firebase';
-import { collection, addDoc, doc, updateDoc, deleteDoc } from 'firebase/firestore';
+import { collection, addDoc, doc, updateDoc, deleteDoc, onSnapshot, query, orderBy } from 'firebase/firestore';
 import { User } from 'firebase/auth';
 import { handleFirestoreError } from '../utils/errorHandler';
-import { Layers, Maximize, Crop, Clock, Tags, Calculator, FileText, Save, Download, FileSpreadsheet, Lightbulb, CheckCircle, AlertTriangle, Info, Copy, Trash2, Plus, Upload, Image as ImageIcon, FileArchive, Camera } from 'lucide-react';
+import { Layers, Maximize, Crop, Clock, Tags, Calculator, FileText, Save, Download, FileSpreadsheet, Lightbulb, CheckCircle, AlertTriangle, Info, Copy, Trash2, Plus, Upload, Image as ImageIcon, FileArchive, Camera, Package, User as UserIcon } from 'lucide-react';
 import toast from 'react-hot-toast';
 import ConfirmModal from './ConfirmModal';
 
@@ -85,6 +85,8 @@ export default function Cotizador({ config, user, loadedQuote, onQuoteLoaded }: 
   const [complejidad, setComplejidad] = useState('sencillo');
   const [aplicarIva, setAplicarIva] = useState(true);
   const [cliente, setCliente] = useState('');
+  const [clienteId, setClienteId] = useState('');
+  const [clientes, setClientes] = useState<Cliente[]>([]);
   const [notas, setNotas] = useState('');
   
   const [fotoFile, setFotoFile] = useState<File | null>(null);
@@ -97,6 +99,18 @@ export default function Cotizador({ config, user, loadedQuote, onQuoteLoaded }: 
 
   const [resultado, setResultado] = useState<DetailedQuoteData | null>(null);
   const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    const q = query(collection(db, `users/${user.uid}/clientes`), orderBy('nombre', 'asc'));
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const loaded: Cliente[] = [];
+      snapshot.forEach((doc) => {
+        loaded.push({ id: doc.id, ...doc.data() } as Cliente);
+      });
+      setClientes(loaded);
+    });
+    return () => unsubscribe();
+  }, [user.uid]);
 
   useEffect(() => {
     if (loadedQuote) {
@@ -121,6 +135,7 @@ export default function Cotizador({ config, user, loadedQuote, onQuoteLoaded }: 
           setComplejidad(parsed.inputs.complejidad ?? 'sencillo');
           setAplicarIva(parsed.inputs.aplicarIva ?? true);
           setCliente(parsed.inputs.cliente ?? '');
+          setClienteId(parsed.inputs.clienteId ?? '');
           setNotas(parsed.inputs.notas ?? '');
           setFotoUrl(parsed.fotoUrl);
           setArchivoUrl(parsed.archivoUrl);
@@ -195,6 +210,7 @@ export default function Cotizador({ config, user, loadedQuote, onQuoteLoaded }: 
           complejidad,
           aplicarIva,
           cliente,
+          clienteId,
           notas
         }
       })
@@ -209,7 +225,13 @@ export default function Cotizador({ config, user, loadedQuote, onQuoteLoaded }: 
       return;
     }
     try {
-      await updateDoc(doc(db, `users/${user.uid}/quotes/${currentQuoteId}`), data);
+      const selectedCliente = clientes.find(c => c.id === clienteId);
+      const updateData = {
+        ...data,
+        clienteId: clienteId || null,
+        clienteNombre: selectedCliente?.nombre || null
+      };
+      await updateDoc(doc(db, `users/${user.uid}/quotes/${currentQuoteId}`), updateData);
       toast.success('Cambios guardados exitosamente');
       if (fotoFile) setFotoUrl(JSON.parse(data.datos).fotoUrl);
       if (archivoFile) setArchivoUrl(JSON.parse(data.datos).archivoUrl);
@@ -231,10 +253,13 @@ export default function Cotizador({ config, user, loadedQuote, onQuoteLoaded }: 
       return;
     }
     try {
+      const selectedCliente = clientes.find(c => c.id === clienteId);
       const quoteData: Omit<Quote, 'id'> = {
         ...data,
         uid: user.uid,
         fecha: new Date().toISOString(),
+        clienteId: clienteId || undefined,
+        clienteNombre: selectedCliente?.nombre || undefined
       };
       const docRef = await addDoc(collection(db, `users/${user.uid}/quotes`), quoteData);
       setCurrentQuoteId(docRef.id);
@@ -264,6 +289,40 @@ export default function Cotizador({ config, user, loadedQuote, onQuoteLoaded }: 
     } finally {
       setSaving(false);
       setShowDeleteConfirm(false);
+    }
+  };
+
+  const handleConvertToOrder = async () => {
+    if (!clienteId) {
+      toast.error('Debes seleccionar un cliente para crear un pedido');
+      return;
+    }
+    if (!resultado) return;
+
+    const selectedCliente = clientes.find(c => c.id === clienteId);
+    if (!selectedCliente) return;
+
+    setSaving(true);
+    try {
+      const pedidoData = {
+        uid: user.uid,
+        fecha: new Date().toISOString(),
+        clienteId,
+        clienteNombre: selectedCliente.nombre,
+        quoteId: currentQuoteId || undefined,
+        articuloNombre: cliente.trim() || 'Sin nombre',
+        total: resultado.total,
+        status: PedidoStatus.PENDIENTE,
+        datosQuote: JSON.stringify(resultado),
+        notas: notas
+      };
+
+      await addDoc(collection(db, `users/${user.uid}/pedidos`), pedidoData);
+      toast.success('¡Pedido creado con éxito!');
+    } catch (error) {
+      handleFirestoreError(error, OperationType.CREATE, `users/${user.uid}/pedidos`);
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -483,8 +542,24 @@ export default function Cotizador({ config, user, loadedQuote, onQuoteLoaded }: 
             </label>
           </div>
           <div className="mt-4">
-            <label className="block text-xs font-semibold text-gray-700 mb-1">Artículo</label>
-            <input type="text" value={cliente} onChange={(e) => setCliente(e.target.value)} placeholder="Nombre del artículo" className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500" />
+            <label className="block text-xs font-semibold text-gray-700 mb-1">Cliente (Para Pedido)</label>
+            <div className="relative">
+              <UserIcon className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
+              <select 
+                value={clienteId} 
+                onChange={(e) => setClienteId(e.target.value)} 
+                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 appearance-none bg-white"
+              >
+                <option value="">Selecciona un cliente...</option>
+                {clientes.map(c => (
+                  <option key={c.id} value={c.id}>{c.nombre}</option>
+                ))}
+              </select>
+            </div>
+          </div>
+          <div className="mt-4">
+            <label className="block text-xs font-semibold text-gray-700 mb-1">Nombre del Artículo</label>
+            <input type="text" value={cliente} onChange={(e) => setCliente(e.target.value)} placeholder="Ej. Letrero Neón" className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500" />
           </div>
           <div className="mt-4">
             <label className="block text-xs font-semibold text-gray-700 mb-1">Notas</label>
@@ -700,15 +775,23 @@ export default function Cotizador({ config, user, loadedQuote, onQuoteLoaded }: 
                 <button onClick={() => setShowDeleteConfirm(true)} disabled={saving} className="w-full flex items-center justify-center gap-2 bg-red-600 hover:bg-red-700 text-white font-bold py-3 rounded-xl shadow-md transition-colors">
                   <Trash2 size={18} /> Eliminar
                 </button>
-                <button onClick={handleNew} className="w-full flex items-center justify-center gap-2 bg-gray-600 hover:bg-gray-700 text-white font-bold py-3 rounded-xl shadow-md transition-colors">
-                  <Plus size={18} /> Nueva
+                <button onClick={handleConvertToOrder} disabled={saving || !clienteId} className="w-full flex items-center justify-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 rounded-xl shadow-md transition-colors disabled:opacity-50">
+                  <Package size={18} /> Convertir a Pedido
                 </button>
               </div>
+              <button onClick={handleNew} className="w-full flex items-center justify-center gap-2 bg-gray-600 hover:bg-gray-700 text-white font-bold py-3 rounded-xl shadow-md transition-colors">
+                <Plus size={18} /> Nueva Cotización
+              </button>
             </>
           ) : (
-            <button onClick={handleSaveAsNew} disabled={saving} className="w-full flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white font-bold py-4 rounded-xl shadow-md transition-colors">
-              <Save size={20} /> {saving ? 'Guardando...' : 'Guardar Cotización'}
-            </button>
+            <div className="grid grid-cols-2 gap-3">
+              <button onClick={handleSaveAsNew} disabled={saving} className="w-full flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white font-bold py-4 rounded-xl shadow-md transition-colors">
+                <Save size={20} /> {saving ? 'Guardando...' : 'Guardar'}
+              </button>
+              <button onClick={handleConvertToOrder} disabled={saving || !clienteId} className="w-full flex items-center justify-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-4 rounded-xl shadow-md transition-colors disabled:opacity-50">
+                <Package size={20} /> Pedido
+              </button>
+            </div>
           )}
           <div className="grid grid-cols-2 gap-3">
             <button onClick={() => generarPDF(cliente || 'Artículo', resultado)} className="flex items-center justify-center gap-2 bg-red-600 hover:bg-red-700 text-white font-semibold py-3 rounded-xl shadow-sm transition-colors">

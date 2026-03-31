@@ -45,6 +45,21 @@ service cloud.firestore {
     //   - notas: string (optional) - Internal notes.
     //   - createdAt: string (required) - ISO string date.
     //
+    // Collection: users/{userId}/pedidos
+    // Document ID: auto-generated
+    // Fields:
+    //   - uid: string (required) - The user's ID.
+    //   - fecha: string (required) - ISO string date.
+    //   - clienteId: string (required) - Customer ID.
+    //   - clienteNombre: string (required) - Customer name.
+    //   - quoteId: string (optional) - Quote ID.
+    //   - articuloNombre: string (required) - Item name.
+    //   - total: number (required) - Total value.
+    //   - status: string (required) - Order status.
+    //   - fechaEntrega: string (optional) - Delivery date.
+    //   - notas: string (optional) - Notes.
+    //   - datosQuote: string (required) - Detailed quote data.
+    //
     // ===============================================================
 
     // ===============================================================
@@ -107,10 +122,12 @@ service cloud.firestore {
     }
 
     function isValidQuote() {
-      return hasOnlyAllowedFields(['uid', 'fecha', 'cliente', 'material', 'lienzo', 'total', 'datos']) &&
+      return hasOnlyAllowedFields(['uid', 'fecha', 'cliente', 'clienteId', 'clienteNombre', 'material', 'lienzo', 'total', 'datos']) &&
              request.resource.data.uid is string && request.resource.data.uid.size() > 0 && request.resource.data.uid.size() < 100 &&
              isValidDateString(request.resource.data.fecha) &&
              request.resource.data.cliente is string && request.resource.data.cliente.size() <= 200 &&
+             (!('clienteId' in request.resource.data) || (request.resource.data.clienteId == null || (request.resource.data.clienteId is string && request.resource.data.clienteId.size() < 100))) &&
+             (!('clienteNombre' in request.resource.data) || (request.resource.data.clienteNombre == null || (request.resource.data.clienteNombre is string && request.resource.data.clienteNombre.size() <= 200))) &&
              request.resource.data.material is string && request.resource.data.material.size() <= 100 &&
              request.resource.data.lienzo is string && request.resource.data.lienzo.size() <= 100 &&
              request.resource.data.total is number && request.resource.data.total >= 0 &&
@@ -126,6 +143,21 @@ service cloud.firestore {
              (!('empresa' in request.resource.data) || (request.resource.data.empresa is string && request.resource.data.empresa.size() <= 200)) &&
              (!('notas' in request.resource.data) || (request.resource.data.notas is string && request.resource.data.notas.size() <= 2000)) &&
              isValidDateString(request.resource.data.createdAt);
+    }
+
+    function isValidPedido() {
+      return hasOnlyAllowedFields(['uid', 'fecha', 'clienteId', 'clienteNombre', 'quoteId', 'articuloNombre', 'total', 'status', 'fechaEntrega', 'notas', 'datosQuote']) &&
+             request.resource.data.uid is string && request.resource.data.uid.size() > 0 && request.resource.data.uid.size() < 100 &&
+             isValidDateString(request.resource.data.fecha) &&
+             request.resource.data.clienteId is string && request.resource.data.clienteId.size() < 100 &&
+             request.resource.data.clienteNombre is string && request.resource.data.clienteNombre.size() <= 200 &&
+             (!('quoteId' in request.resource.data) || (request.resource.data.quoteId == null || (request.resource.data.quoteId is string && request.resource.data.quoteId.size() < 100))) &&
+             request.resource.data.articuloNombre is string && request.resource.data.articuloNombre.size() <= 200 &&
+             request.resource.data.total is number && request.resource.data.total >= 0 &&
+             request.resource.data.status is string &&
+             (!('fechaEntrega' in request.resource.data) || (request.resource.data.fechaEntrega is string)) &&
+             (!('notas' in request.resource.data) || (request.resource.data.notas is string && request.resource.data.notas.size() <= 2000)) &&
+             request.resource.data.datosQuote is string && request.resource.data.datosQuote.size() <= 1000000;
     }
 
     // ===============================================================
@@ -150,6 +182,13 @@ service cloud.firestore {
       allow read: if isOwner(userId);
       allow create: if isOwner(userId) && isValidCliente() && uidUnchanged();
       allow update: if isOwner(userId) && isValidCliente() && uidNotModified();
+      allow delete: if isOwner(userId);
+    }
+
+    match /users/{userId}/pedidos/{pedidoId} {
+      allow read: if isOwner(userId);
+      allow create: if isOwner(userId) && isValidPedido() && uidUnchanged();
+      allow update: if isOwner(userId) && isValidPedido() && uidNotModified();
       allow delete: if isOwner(userId);
     }
   }
