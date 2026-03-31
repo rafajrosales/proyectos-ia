@@ -23,6 +23,17 @@ export interface Quote {
   datos: string; // JSON stringified DetailedQuoteData
 }
 
+export interface Cliente {
+  id?: string;
+  uid: string;
+  nombre: string;
+  telefono?: string;
+  email?: string;
+  empresa?: string;
+  notas?: string;
+  createdAt: string;
+}
+
 export interface DetailedQuoteData {
   total: number;
   subtotal: number;

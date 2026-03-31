@@ -34,6 +34,19 @@ service cloud.firestore {
     //
     // ===============================================================
 
+    // Collection: users/{userId}/clientes
+    // Document ID: auto-generated
+    // Fields:
+    //   - uid: string (required) - The user's ID.
+    //   - nombre: string (required) - Full name.
+    //   - telefono: string (optional) - Phone number.
+    //   - email: string (optional) - Email address.
+    //   - empresa: string (optional) - Company name.
+    //   - notas: string (optional) - Internal notes.
+    //   - createdAt: string (required) - ISO string date.
+    //
+    // ===============================================================
+
     // ===============================================================
     // Helper Functions
     // ===============================================================
@@ -70,6 +83,10 @@ service cloud.firestore {
       return dateStr is string && dateStr.matches("^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}.*Z?$");
     }
 
+    function isValidEmail(email) {
+      return email is string && email.matches("^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$");
+    }
+
     // ===============================================================
     // Domain Validators
     // ===============================================================
@@ -100,6 +117,17 @@ service cloud.firestore {
              request.resource.data.datos is string && request.resource.data.datos.size() <= 1000000;
     }
 
+    function isValidCliente() {
+      return hasOnlyAllowedFields(['uid', 'nombre', 'telefono', 'email', 'empresa', 'notas', 'createdAt']) &&
+             request.resource.data.uid is string && request.resource.data.uid.size() > 0 && request.resource.data.uid.size() < 100 &&
+             request.resource.data.nombre is string && request.resource.data.nombre.size() > 0 && request.resource.data.nombre.size() <= 200 &&
+             (!('telefono' in request.resource.data) || (request.resource.data.telefono is string && request.resource.data.telefono.size() <= 50)) &&
+             (!('email' in request.resource.data) || (request.resource.data.email == "" || isValidEmail(request.resource.data.email))) &&
+             (!('empresa' in request.resource.data) || (request.resource.data.empresa is string && request.resource.data.empresa.size() <= 200)) &&
+             (!('notas' in request.resource.data) || (request.resource.data.notas is string && request.resource.data.notas.size() <= 2000)) &&
+             isValidDateString(request.resource.data.createdAt);
+    }
+
     // ===============================================================
     // Rules
     // ===============================================================
@@ -115,6 +143,13 @@ service cloud.firestore {
       allow read: if isOwner(userId);
       allow create: if isOwner(userId) && isValidQuote() && uidUnchanged();
       allow update: if isOwner(userId) && isValidQuote() && uidNotModified();
+      allow delete: if isOwner(userId);
+    }
+
+    match /users/{userId}/clientes/{clienteId} {
+      allow read: if isOwner(userId);
+      allow create: if isOwner(userId) && isValidCliente() && uidUnchanged();
+      allow update: if isOwner(userId) && isValidCliente() && uidNotModified();
       allow delete: if isOwner(userId);
     }
   }

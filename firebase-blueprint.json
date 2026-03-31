@@ -85,6 +85,43 @@
         }
       },
       "required": ["uid", "fecha", "cliente", "material", "lienzo", "total", "datos"]
+    },
+    "Cliente": {
+      "title": "Cliente",
+      "description": "Customer contact information.",
+      "type": "object",
+      "properties": {
+        "uid": {
+          "type": "string",
+          "description": "The user's ID who owns the customer."
+        },
+        "nombre": {
+          "type": "string",
+          "description": "Full name of the customer."
+        },
+        "telefono": {
+          "type": "string",
+          "description": "Phone number."
+        },
+        "email": {
+          "type": "string",
+          "description": "Email address."
+        },
+        "empresa": {
+          "type": "string",
+          "description": "Company name."
+        },
+        "notas": {
+          "type": "string",
+          "description": "Internal notes."
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Creation date."
+        }
+      },
+      "required": ["uid", "nombre", "createdAt"]
     }
   },
   "firestore": {
@@ -99,6 +136,12 @@
         "$ref": "#/entities/Quote"
       },
       "description": "The user's saved quotes."
+    },
+    "/users/{userId}/clientes/{clienteId}": {
+      "schema": {
+        "$ref": "#/entities/Cliente"
+      },
+      "description": "The user's customers."
     }
   }
 }
