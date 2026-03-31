@@ -45,19 +45,26 @@ export enum PedidoStatus {
   CANCELADO = 'Cancelado'
 }
 
+export interface PedidoArticulo {
+  nombre: string;
+  cantidad: number;
+  precioUnitario: number;
+  total: number;
+  quoteId?: string;
+  datosQuote?: string; // JSON stringified DetailedQuoteData
+}
+
 export interface Pedido {
   id?: string;
   uid: string;
   fecha: string;
   clienteId: string;
   clienteNombre: string;
-  quoteId?: string;
-  articuloNombre: string;
+  articulos: PedidoArticulo[];
   total: number;
   status: PedidoStatus;
   fechaEntrega?: string;
   notas?: string;
-  datosQuote: string; // JSON stringified DetailedQuoteData
 }
 
 export interface DetailedQuoteData {

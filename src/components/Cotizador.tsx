@@ -309,11 +309,18 @@ export default function Cotizador({ config, user, loadedQuote, onQuoteLoaded }: 
         fecha: new Date().toISOString(),
         clienteId,
         clienteNombre: selectedCliente.nombre,
-        quoteId: currentQuoteId || undefined,
-        articuloNombre: cliente.trim() || 'Sin nombre',
+        articulos: [
+          {
+            nombre: cliente.trim() || 'Sin nombre',
+            cantidad: 1,
+            precioUnitario: Math.round(resultado.total),
+            total: Math.round(resultado.total),
+            quoteId: currentQuoteId || undefined,
+            datosQuote: JSON.stringify(resultado)
+          }
+        ],
         total: Math.round(resultado.total),
         status: PedidoStatus.PENDIENTE,
-        datosQuote: JSON.stringify(resultado),
         notas: notas
       };
 

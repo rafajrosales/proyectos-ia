@@ -2,9 +2,9 @@ import React, { useState, useEffect } from 'react';
 import { db } from '../firebase';
 import { collection, addDoc, updateDoc, deleteDoc, doc, onSnapshot, query, orderBy } from 'firebase/firestore';
 import { User } from 'firebase/auth';
-import { Pedido, PedidoStatus, OperationType, Cliente, Quote } from '../types';
+import { Pedido, PedidoStatus, OperationType, Cliente, Quote, PedidoArticulo } from '../types';
 import { handleFirestoreError } from '../utils/errorHandler';
-import { Package, Calendar, User as UserIcon, DollarSign, Tag, Clock, CheckCircle, Truck, XCircle, AlertCircle, Search, Edit2, Trash2, X, Save, FileText, Plus, List } from 'lucide-react';
+import { Package, Calendar, User as UserIcon, DollarSign, Tag, Clock, CheckCircle, Truck, XCircle, AlertCircle, Search, Edit2, Trash2, X, Save, FileText, Plus, List, Trash } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 interface Props {
@@ -22,8 +22,7 @@ export default function Pedidos({ user }: Props) {
 
   // Form state
   const [clienteId, setClienteId] = useState('');
-  const [articuloNombre, setArticuloNombre] = useState('');
-  const [total, setTotal] = useState(0);
+  const [articulos, setArticulos] = useState<PedidoArticulo[]>([]);
   const [status, setStatus] = useState<PedidoStatus>(PedidoStatus.PENDIENTE);
   const [fechaEntrega, setFechaEntrega] = useState('');
   const [notas, setNotas] = useState('');
@@ -74,17 +73,15 @@ export default function Pedidos({ user }: Props) {
     if (pedido) {
       setEditingPedido(pedido);
       setClienteId(pedido.clienteId);
-      setArticuloNombre(pedido.articuloNombre);
-      setTotal(pedido.total);
+      setArticulos(pedido.articulos || []);
       setStatus(pedido.status);
       setFechaEntrega(pedido.fechaEntrega || '');
       setNotas(pedido.notas || '');
-      setQuoteId(pedido.quoteId || '');
+      setQuoteId(''); // Reset quote selection on edit for now to avoid confusion
     } else {
       setEditingPedido(null);
       setClienteId('');
-      setArticuloNombre('');
-      setTotal(0);
+      setArticulos([{ nombre: '', cantidad: 1, precioUnitario: 0, total: 0 }]);
       setStatus(PedidoStatus.PENDIENTE);
       setFechaEntrega('');
       setNotas('');
@@ -93,12 +90,48 @@ export default function Pedidos({ user }: Props) {
     setIsModalOpen(true);
   };
 
+  const addArticulo = () => {
+    setArticulos([...articulos, { nombre: '', cantidad: 1, precioUnitario: 0, total: 0 }]);
+  };
+
+  const removeArticulo = (index: number) => {
+    if (articulos.length > 1) {
+      setArticulos(articulos.filter((_, i) => i !== index));
+    }
+  };
+
+  const updateArticulo = (index: number, field: keyof PedidoArticulo, value: any) => {
+    const newArticulos = [...articulos];
+    const art = { ...newArticulos[index], [field]: value };
+    
+    if (field === 'cantidad' || field === 'precioUnitario') {
+      art.total = Math.round(art.cantidad * art.precioUnitario);
+    }
+    
+    newArticulos[index] = art;
+    setArticulos(newArticulos);
+  };
+
   const handleSelectQuote = (id: string) => {
     const quote = quotes.find(q => q.id === id);
     if (quote) {
       setQuoteId(id);
-      setArticuloNombre(quote.cliente); // quote.cliente is the article name
-      setTotal(Math.round(quote.total));
+      const newArticulo: PedidoArticulo = {
+        nombre: quote.cliente,
+        cantidad: 1,
+        precioUnitario: Math.round(quote.total),
+        total: Math.round(quote.total),
+        quoteId: id,
+        datosQuote: quote.datos
+      };
+      
+      // If there's only one empty article, replace it. Otherwise append.
+      if (articulos.length === 1 && !articulos[0].nombre && articulos[0].total === 0) {
+        setArticulos([newArticulo]);
+      } else {
+        setArticulos([...articulos, newArticulo]);
+      }
+
       if (quote.clienteId) {
         setClienteId(quote.clienteId);
       }
@@ -107,10 +140,14 @@ export default function Pedidos({ user }: Props) {
     }
   };
 
+  const calculateTotal = () => {
+    return articulos.reduce((sum, art) => sum + art.total, 0);
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!clienteId || !articuloNombre) {
-      toast.error('Cliente y Artículo son obligatorios');
+    if (!clienteId || articulos.some(a => !a.nombre)) {
+      toast.error('Cliente y nombres de artículos son obligatorios');
       return;
     }
 
@@ -122,13 +159,11 @@ export default function Pedidos({ user }: Props) {
       fecha: editingPedido ? editingPedido.fecha : new Date().toISOString(),
       clienteId,
       clienteNombre: selectedCliente.nombre,
-      articuloNombre,
-      total: Math.round(total),
+      articulos,
+      total: calculateTotal(),
       status,
       fechaEntrega,
-      notas,
-      quoteId: quoteId || undefined,
-      datosQuote: editingPedido?.datosQuote || (quoteId ? (quotes.find(q => q.id === quoteId)?.datos || '') : '')
+      notas
     };
 
     try {
@@ -180,12 +215,12 @@ export default function Pedidos({ user }: Props) {
 
   const filteredPedidos = pedidos.filter(p => {
     const clienteNombre = p.clienteNombre || '';
-    const articuloNombre = p.articuloNombre || '';
     const status = p.status || '';
     const search = searchTerm.toLowerCase();
+    const articulosMatch = p.articulos?.some(a => a.nombre.toLowerCase().includes(search)) || false;
     
     return clienteNombre.toLowerCase().includes(search) ||
-           articuloNombre.toLowerCase().includes(search) ||
+           articulosMatch ||
            status.toLowerCase().includes(search);
   });
 
@@ -241,7 +276,23 @@ export default function Pedidos({ user }: Props) {
                     {getStatusIcon(pedido.status)}
                   </div>
                   <div>
-                    <h3 className="font-bold text-gray-900 text-lg">{pedido.articuloNombre || 'Sin nombre'}</h3>
+                    <h3 className="font-bold text-gray-900 text-lg">
+                      {pedido.articulos && pedido.articulos.length > 0 
+                        ? (pedido.articulos.length === 1 
+                            ? pedido.articulos[0].nombre 
+                            : `${pedido.articulos[0].nombre} (+${pedido.articulos.length - 1} más)`)
+                        : 'Sin artículos'}
+                    </h3>
+                    {pedido.articulos && pedido.articulos.length > 1 && (
+                      <div className="mt-2 space-y-1">
+                        {pedido.articulos.map((art, idx) => (
+                          <div key={idx} className="text-[10px] text-gray-400 flex justify-between max-w-xs">
+                            <span className="truncate mr-2">• {art.nombre} (x{art.cantidad})</span>
+                            <span className="shrink-0">${art.total.toLocaleString()}</span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
                     <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-gray-500 mt-1">
                       <span className="flex items-center gap-1">
                         <UserIcon size={14} /> 
@@ -349,33 +400,84 @@ export default function Pedidos({ user }: Props) {
                 </select>
               </div>
 
-              <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-1">Nombre del Artículo *</label>
-                <div className="relative">
-                  <Tag className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
-                  <input 
-                    type="text" 
-                    value={articuloNombre}
-                    onChange={(e) => setArticuloNombre(e.target.value)}
-                    placeholder="Ej. Letrero Neón"
-                    className="w-full pl-10 pr-4 py-2.5 border border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none"
-                    required
-                  />
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <label className="block text-sm font-semibold text-gray-700">Artículos del Pedido *</label>
+                  <button 
+                    type="button" 
+                    onClick={addArticulo}
+                    className="text-xs font-bold text-indigo-600 hover:text-indigo-800 flex items-center gap-1"
+                  >
+                    <Plus size={14} /> Agregar Artículo
+                  </button>
                 </div>
+                
+                {articulos.map((art, index) => (
+                  <div key={index} className="p-4 bg-gray-50 rounded-xl border border-gray-200 space-y-3 relative group/item">
+                    {articulos.length > 1 && (
+                      <button 
+                        type="button" 
+                        onClick={() => removeArticulo(index)}
+                        className="absolute top-2 right-2 p-1 text-gray-400 hover:text-red-500 transition-colors"
+                      >
+                        <Trash size={16} />
+                      </button>
+                    )}
+                    
+                    <div className="grid grid-cols-1 gap-3">
+                      <div>
+                        <label className="block text-[10px] font-bold text-gray-400 uppercase mb-1">Nombre del Artículo</label>
+                        <input 
+                          type="text" 
+                          value={art.nombre}
+                          onChange={(e) => updateArticulo(index, 'nombre', e.target.value)}
+                          placeholder="Ej. Letrero Neón"
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none text-sm"
+                          required
+                        />
+                      </div>
+                      <div className="grid grid-cols-3 gap-3">
+                        <div>
+                          <label className="block text-[10px] font-bold text-gray-400 uppercase mb-1">Cant.</label>
+                          <input 
+                            type="number" 
+                            value={art.cantidad}
+                            onChange={(e) => updateArticulo(index, 'cantidad', Number(e.target.value))}
+                            min="1"
+                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none text-sm"
+                            required
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-[10px] font-bold text-gray-400 uppercase mb-1">P. Unit.</label>
+                          <input 
+                            type="number" 
+                            value={art.precioUnitario}
+                            onChange={(e) => updateArticulo(index, 'precioUnitario', Number(e.target.value))}
+                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none text-sm"
+                            required
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-[10px] font-bold text-gray-400 uppercase mb-1">Total</label>
+                          <div className="w-full px-3 py-2 bg-gray-100 border border-gray-200 rounded-lg text-sm font-bold text-gray-600">
+                            ${art.total.toLocaleString()}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                ))}
               </div>
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-1">Total ($) *</label>
+                  <label className="block text-sm font-semibold text-gray-700 mb-1">Total General ($)</label>
                   <div className="relative">
                     <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
-                    <input 
-                      type="number" 
-                      value={total}
-                      onChange={(e) => setTotal(Math.round(Number(e.target.value)))}
-                      className="w-full pl-10 pr-4 py-2.5 border border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none"
-                      required
-                    />
+                    <div className="w-full pl-10 pr-4 py-2.5 bg-indigo-50 border border-indigo-100 rounded-xl text-indigo-700 font-bold">
+                      {calculateTotal().toLocaleString()}
+                    </div>
                   </div>
                 </div>
                 <div>
