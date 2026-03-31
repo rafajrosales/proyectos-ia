@@ -171,7 +171,7 @@ export default function Cotizador({ config, user, loadedQuote, onQuoteLoaded }: 
     return {
       cliente: cliente || 'Sin nombre',
       material: resultado.material.nombre,
-      lienzo: `${resultado.lienzo.ancho}x${resultado.lienzo.largo}cm`,
+      lienzo: resultado.lienzo.piezas ? `${resultado.lienzo.piezas} pzas de ${resultado.lienzo.ancho}x${resultado.lienzo.largo}cm` : `${resultado.lienzo.ancho}x${resultado.lienzo.largo}cm`,
       total: resultado.total,
       datos: JSON.stringify({
         ...resultado,
@@ -340,7 +340,7 @@ export default function Cotizador({ config, user, loadedQuote, onQuoteLoaded }: 
                 className={`p-4 rounded-xl border-2 transition-all text-center ${lienzoKey === key ? 'border-emerald-500 bg-emerald-50' : 'border-gray-200 hover:border-emerald-300'}`}
               >
                 <p className="font-semibold text-sm text-gray-800">{l.nombre}</p>
-                <p className="text-xl font-bold text-gray-900">{key === 'custom' ? 'Configurar' : `${l.ancho} × ${l.largo} cm`}</p>
+                <p className="text-xl font-bold text-gray-900">{key === 'custom' ? 'Configurar' : l.piezas ? `${l.piezas} pzas de ${l.ancho}×${l.largo}cm` : `${l.ancho} × ${l.largo} cm`}</p>
               </button>
             ))}
           </div>
@@ -607,7 +607,9 @@ export default function Cotizador({ config, user, loadedQuote, onQuoteLoaded }: 
           <div className="space-y-2 text-sm">
             <div className="flex justify-between py-1"><span className="text-gray-500">Costo Fijo Hora</span> <span className="font-medium">{formatCurrency(resultado.costoFijoHora)}</span></div>
             <div className="flex justify-between py-1"><span className="text-gray-500">Mano de Obra</span> <span className="font-medium">{formatCurrency(resultado.costoMaquina + resultado.costoEnergia)}</span></div>
-            <div className="flex justify-between py-1"><span className="text-gray-500">Material ({(resultado.proporcionLienzo * 100).toFixed(1)}% + 50% extra)</span> <span className="font-medium">{formatCurrency(resultado.costoMaterial)}</span></div>
+            <div className="flex justify-between py-1"><span className="text-gray-500">Material Base ({(resultado.proporcionLienzo * 100).toFixed(1)}%)</span> <span className="font-medium">{formatCurrency(resultado.costoMaterialBase)}</span></div>
+            <div className="flex justify-between py-1"><span className="text-gray-500">Margen Material (50%)</span> <span className="font-medium">{formatCurrency(resultado.margenMaterial)}</span></div>
+            <div className="flex justify-between py-1 bg-gray-50 px-2 -mx-2 rounded"><span className="text-gray-700 font-medium">Total Material</span> <span className="font-semibold text-gray-900">{formatCurrency(resultado.costoMaterial)}</span></div>
             <div className="flex justify-between py-1"><span className="text-gray-500">Diseño</span> <span className="font-medium">{formatCurrency(resultado.costoDiseno)}</span></div>
             <div className="flex justify-between py-1 border-b border-gray-100 pb-2"><span className="text-gray-500">Utilidad</span> <span className="font-medium text-emerald-600">{formatCurrency(resultado.utilidad)}</span></div>
             <div className="flex justify-between py-1"><span className="text-gray-500">Subtotal</span> <span className="font-medium">{formatCurrency(resultado.subtotal)}</span></div>

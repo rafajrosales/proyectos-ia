@@ -36,6 +36,7 @@ export interface DetailedQuoteData {
     ancho: number;
     largo: number;
     nombre: string;
+    piezas?: number;
   };
   ancho: number;
   largo: number;
@@ -49,8 +50,9 @@ export interface DetailedQuoteData {
   costoFijoHora: number;
   costoMaquina: number;
   costoEnergia: number;
+  costoMaterialBase: number;
+  margenMaterial: number;
   costoMaterial: number;
-  recargoMaterialPequeno: number;
   costoDiseno: number;
   notas?: string;
   fotoUrl?: string;
@@ -81,9 +83,10 @@ export const MATERIALES: Record<string, { nombre: string; costo: number }> = {
   espejo: { nombre: 'Espejo 3mm', costo: 750 }
 };
 
-export const LIENZOS: Record<string, { ancho: number; largo: number; nombre: string }> = {
+export const LIENZOS: Record<string, { ancho: number; largo: number; nombre: string; piezas?: number; factor?: number }> = {
   std120x240: { ancho: 120, largo: 240, nombre: 'Estándar' },
   espejo120x180: { ancho: 120, largo: 180, nombre: 'Espejo' },
+  tableros40x40: { ancho: 40, largo: 40, nombre: 'Tableros', piezas: 18, factor: 4 },
   custom: { ancho: 120, largo: 240, nombre: 'Personalizado' }
 };
 

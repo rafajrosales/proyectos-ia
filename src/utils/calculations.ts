@@ -46,7 +46,7 @@ export function calcularCotizacion(
   const tiempoTotalMinutos = (tiempoConPadding + setup) * cantidad;
   const tiempoTotalHoras = tiempoTotalMinutos / 60;
 
-  const areaHoja = lienzo.ancho * lienzo.largo;
+  const areaHoja = lienzo.ancho * lienzo.largo * (lienzo.piezas || 1);
   
   const anchoCobrar = redondearComercial(ancho, redondeo);
   const largoCobrar = redondearComercial(largo, redondeo);
@@ -62,7 +62,10 @@ export function calcularCotizacion(
   if (hojasNecesarias < 1) hojasNecesarias = 1;
 
   // Costo basado en la proporción del lienzo utilizado más un 50% extra
-  const costoMaterial = proporcionLienzo * material.costo * 1.5;
+  const factorLienzo = lienzo.factor || 1;
+  const costoMaterialBase = proporcionLienzo * material.costo * factorLienzo;
+  const margenMaterial = costoMaterialBase * 0.5;
+  const costoMaterial = costoMaterialBase + margenMaterial;
   const aprovechamiento = Math.min(100, (areaCobrar / areaTotalNecesaria) * 100);
 
   let procesoMultiplier = 1;
@@ -115,6 +118,8 @@ export function calcularCotizacion(
     costoFijoHora,
     costoMaquina,
     costoEnergia,
+    costoMaterialBase,
+    margenMaterial,
     costoMaterial,
     costoDiseno,
     notas

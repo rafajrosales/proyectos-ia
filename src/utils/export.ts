@@ -36,7 +36,7 @@ export function generarPDF(cliente: string, resultado: DetailedQuoteData) {
   const lineHeight = 7;
   
   doc.text(`Material:`, 20, y); doc.text(resultado.material.nombre, 80, y); y += lineHeight;
-  doc.text(`Lienzo (Hoja):`, 20, y); doc.text(`${resultado.lienzo.ancho} × ${resultado.lienzo.largo} cm`, 80, y); y += lineHeight;
+  doc.text(`Lienzo (Hoja):`, 20, y); doc.text(resultado.lienzo.piezas ? `${resultado.lienzo.piezas} pzas de ${resultado.lienzo.ancho} × ${resultado.lienzo.largo} cm` : `${resultado.lienzo.ancho} × ${resultado.lienzo.largo} cm`, 80, y); y += lineHeight;
   doc.text(`Dimensiones Diseño:`, 20, y); doc.text(`${resultado.ancho} × ${resultado.largo} cm`, 80, y); y += lineHeight;
   doc.text(`Dimensiones a Cobrar:`, 20, y); doc.text(`${resultado.anchoCobrar} × ${resultado.largoCobrar} cm`, 80, y); y += lineHeight;
   doc.text(`Cantidad:`, 20, y); doc.text(`${resultado.cantidad}`, 80, y); y += lineHeight;
@@ -54,7 +54,9 @@ export function generarPDF(cliente: string, resultado: DetailedQuoteData) {
   y += 10;
   doc.setFontSize(11);
   doc.setTextColor(50);
-  doc.text(`Material (${(resultado.proporcionLienzo * 100).toFixed(1)}% + 50% extra):`, 20, y); doc.text(`$${resultado.costoMaterial.toFixed(2)}`, 190, y, { align: 'right' }); y += lineHeight;
+  doc.text(`Material Base (${(resultado.proporcionLienzo * 100).toFixed(1)}%):`, 20, y); doc.text(`$${resultado.costoMaterialBase.toFixed(2)}`, 190, y, { align: 'right' }); y += lineHeight;
+  doc.text(`Margen Material (50%):`, 20, y); doc.text(`$${resultado.margenMaterial.toFixed(2)}`, 190, y, { align: 'right' }); y += lineHeight;
+  doc.text(`Total Material:`, 20, y); doc.text(`$${resultado.costoMaterial.toFixed(2)}`, 190, y, { align: 'right' }); y += lineHeight;
   doc.text(`Subtotal:`, 20, y); doc.text(`$${resultado.subtotal.toFixed(2)}`, 190, y, { align: 'right' }); y += lineHeight;
   doc.text(resultado.iva > 0 ? `IVA (16%):` : `IVA (0%):`, 20, y); doc.text(`$${resultado.iva.toFixed(2)}`, 190, y, { align: 'right' }); y += lineHeight;
   
