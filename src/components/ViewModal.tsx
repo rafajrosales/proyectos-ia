@@ -37,7 +37,7 @@ export default function ViewModal({ quote, onClose }: Props) {
           <div className="flex items-start gap-3">
             <User className="text-gray-400 mt-1" size={18} />
             <div>
-              <p className="text-sm font-semibold text-gray-500">Cliente</p>
+              <p className="text-sm font-semibold text-gray-500">Artículo</p>
               <p className="text-gray-900 font-medium">{quote.cliente}</p>
             </div>
           </div>

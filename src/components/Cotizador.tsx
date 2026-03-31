@@ -452,7 +452,7 @@ export default function Cotizador({ config, user, loadedQuote, onQuoteLoaded }: 
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-xl font-bold text-gray-800 flex items-center gap-2">
               <span className="w-8 h-8 bg-purple-100 text-purple-600 rounded-lg flex items-center justify-center text-sm">5</span>
-              <Tags className="text-purple-600" /> Precio y Cliente
+              <Tags className="text-purple-600" /> Artículo y Precio
             </h2>
           </div>
           <div className="grid grid-cols-2 gap-4">
@@ -483,8 +483,8 @@ export default function Cotizador({ config, user, loadedQuote, onQuoteLoaded }: 
             </label>
           </div>
           <div className="mt-4">
-            <label className="block text-xs font-semibold text-gray-700 mb-1">Cliente</label>
-            <input type="text" value={cliente} onChange={(e) => setCliente(e.target.value)} placeholder="Nombre del cliente" className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500" />
+            <label className="block text-xs font-semibold text-gray-700 mb-1">Artículo</label>
+            <input type="text" value={cliente} onChange={(e) => setCliente(e.target.value)} placeholder="Nombre del artículo" className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500" />
           </div>
           <div className="mt-4">
             <label className="block text-xs font-semibold text-gray-700 mb-1">Notas</label>
@@ -711,10 +711,10 @@ export default function Cotizador({ config, user, loadedQuote, onQuoteLoaded }: 
             </button>
           )}
           <div className="grid grid-cols-2 gap-3">
-            <button onClick={() => generarPDF(cliente || 'Cliente', resultado)} className="flex items-center justify-center gap-2 bg-red-600 hover:bg-red-700 text-white font-semibold py-3 rounded-xl shadow-sm transition-colors">
+            <button onClick={() => generarPDF(cliente || 'Artículo', resultado)} className="flex items-center justify-center gap-2 bg-red-600 hover:bg-red-700 text-white font-semibold py-3 rounded-xl shadow-sm transition-colors">
               <FileText size={18} /> PDF
             </button>
-            <button onClick={() => exportarJSON(resultado, `Cotizacion_${cliente || 'Cliente'}_${Date.now()}.json`)} className="flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 rounded-xl shadow-sm transition-colors">
+            <button onClick={() => exportarJSON(resultado, `Cotizacion_${cliente || 'Artículo'}_${Date.now()}.json`)} className="flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 rounded-xl shadow-sm transition-colors">
               <Download size={18} /> JSON
             </button>
           </div>

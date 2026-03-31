@@ -189,7 +189,7 @@ export default function Historial({ quotes, user, onLoadQuote }: Props) {
               <thead>
                 <tr className="bg-gray-50 border-b border-gray-200">
                   <th className="px-6 py-4 text-sm font-bold text-gray-700"><div className="flex items-center gap-2"><Calendar size={16} className="text-gray-400" /> Fecha</div></th>
-                  <th className="px-6 py-4 text-sm font-bold text-gray-700"><div className="flex items-center gap-2"><UserIcon size={16} className="text-gray-400" /> Cliente</div></th>
+                  <th className="px-6 py-4 text-sm font-bold text-gray-700"><div className="flex items-center gap-2"><UserIcon size={16} className="text-gray-400" /> Artículo</div></th>
                   <th className="px-6 py-4 text-sm font-bold text-gray-700"><div className="flex items-center gap-2"><Layers size={16} className="text-gray-400" /> Material</div></th>
                   <th className="px-6 py-4 text-sm font-bold text-gray-700"><div className="flex items-center gap-2"><DollarSign size={16} className="text-gray-400" /> Total</div></th>
                   <th className="px-6 py-4 text-sm font-bold text-gray-700">Acciones</th>

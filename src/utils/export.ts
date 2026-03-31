@@ -18,7 +18,7 @@ export function generarPDF(cliente: string, resultado: DetailedQuoteData) {
 
   doc.setFontSize(11);
   doc.setTextColor(50);
-  doc.text(`Cliente: ${cliente}`, 20, 45);
+  doc.text(`Artículo: ${cliente}`, 20, 45);
   doc.text(`Fecha: ${new Date().toLocaleDateString('es-MX')}`, 20, 52);
   doc.text(`Folio: COT-${Date.now().toString().slice(-6)}`, 140, 45);
   doc.text(`Validez: 7 días`, 140, 52);
@@ -83,7 +83,7 @@ export function generarPDF(cliente: string, resultado: DetailedQuoteData) {
 export function exportarCSV(historial: Quote[]) {
   if (historial.length === 0) return;
   
-  let csv = 'Fecha,Cliente,Material,Lienzo,Total (MXN)\n';
+  let csv = 'Fecha,Artículo,Material,Lienzo,Total (MXN)\n';
   historial.forEach(cot => {
     csv += `${new Date(cot.fecha).toLocaleDateString('es-MX')},"${cot.cliente}","${cot.material}","${cot.lienzo}",$${cot.total.toFixed(2)}\n`;
   });
