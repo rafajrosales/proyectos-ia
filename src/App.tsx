@@ -127,8 +127,8 @@ export default function App() {
           animate={{ opacity: 1, y: 0 }}
           className="bg-white p-8 rounded-3xl shadow-xl max-w-md w-full text-center border border-gray-100"
         >
-          <div className="w-20 h-20 bg-indigo-100 rounded-2xl flex items-center justify-center mx-auto mb-6 rotate-3">
-            <Zap className="w-10 h-10 text-indigo-600" />
+          <div className="w-20 h-20 bg-blue-50 rounded-2xl flex items-center justify-center mx-auto mb-6 rotate-3 border border-blue-100">
+            <Zap className="w-10 h-10 text-[#002147]" />
           </div>
           <h1 className="text-3xl font-black text-gray-900 mb-2 tracking-tight">Cotizador Láser R&G</h1>
           <p className="text-gray-500 mb-8 font-medium">Sistema Profesional de Cotización. Inicia sesión para continuar.</p>
@@ -168,7 +168,7 @@ export default function App() {
             </div>
             <button
               type="submit"
-              className="w-full flex items-center justify-center gap-2 bg-indigo-600 text-white font-bold py-4 px-4 rounded-2xl hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-200 active:scale-95 mt-8"
+              className="w-full flex items-center justify-center gap-2 bg-[#002147] text-white font-bold py-4 px-4 rounded-2xl hover:bg-blue-950 transition-all shadow-lg shadow-blue-100 active:scale-95 mt-8"
             >
               Iniciar Sesión
             </button>
@@ -192,16 +192,16 @@ export default function App() {
       <Toaster position="top-right" />
       
       {/* Mobile Header */}
-      <header className="lg:hidden bg-white border-b border-gray-100 px-4 py-4 flex items-center justify-between sticky top-0 z-40">
+      <header className="lg:hidden bg-[#002147] border-b border-blue-900 px-4 py-4 flex items-center justify-between sticky top-0 z-40 shadow-md">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 bg-indigo-600 rounded-xl flex items-center justify-center shadow-lg shadow-indigo-100">
-            <Zap className="w-6 h-6 text-white" />
+          <div className="w-10 h-10 bg-white rounded-xl flex items-center justify-center shadow-lg">
+            <Zap className="w-6 h-6 text-[#002147]" />
           </div>
-          <h1 className="text-lg font-black text-gray-900 tracking-tight">R&G Láser</h1>
+          <h1 className="text-lg font-black text-white tracking-tight">R&G Láser</h1>
         </div>
         <button 
           onClick={() => setIsSidebarOpen(true)}
-          className="p-2 text-gray-500 hover:bg-gray-100 rounded-xl transition-colors"
+          className="p-2 text-blue-100 hover:bg-blue-900/50 rounded-xl transition-colors"
         >
           <MenuIcon size={24} />
         </button>
@@ -222,32 +222,32 @@ export default function App() {
 
       {/* Sidebar */}
       <aside className={`
-        fixed inset-y-0 left-0 z-50 w-72 bg-white border-r border-gray-100 transform transition-transform duration-300 ease-in-out lg:relative lg:translate-x-0 flex flex-col
+        fixed inset-y-0 left-0 z-50 w-72 bg-[#002147] border-r border-blue-950 transform transition-transform duration-300 ease-in-out lg:relative lg:translate-x-0 flex flex-col shadow-2xl
         ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'}
       `}>
         <div className="p-6 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-indigo-600 rounded-xl flex items-center justify-center shadow-lg shadow-indigo-100">
-              <Zap className="w-6 h-6 text-white" />
+            <div className="w-10 h-10 bg-white rounded-xl flex items-center justify-center shadow-lg">
+              <Zap className="w-6 h-6 text-[#002147]" />
             </div>
-            <h1 className="text-xl font-black text-gray-900 tracking-tight">R&G Láser</h1>
+            <h1 className="text-xl font-black text-white tracking-tight">R&G Láser</h1>
           </div>
           <button 
             onClick={() => setIsSidebarOpen(false)}
-            className="lg:hidden p-2 text-gray-400 hover:bg-gray-100 rounded-xl transition-colors"
+            className="lg:hidden p-2 text-blue-200 hover:bg-blue-900/50 rounded-xl transition-colors"
           >
             <XIcon size={20} />
           </button>
         </div>
 
         <div className="px-4 py-2">
-          <div className="bg-indigo-50/50 rounded-2xl p-4 flex items-center gap-3 mb-6">
-            <div className="w-10 h-10 bg-white rounded-xl flex items-center justify-center shadow-sm border border-indigo-100">
-              <UserIcon className="text-indigo-600" size={20} />
+          <div className="bg-blue-900/30 rounded-2xl p-4 flex items-center gap-3 mb-6 border border-blue-800/20">
+            <div className="w-10 h-10 bg-blue-800/40 rounded-xl flex items-center justify-center shadow-sm border border-blue-700/20">
+              <UserIcon className="text-blue-100" size={20} />
             </div>
             <div className="overflow-hidden">
-              <p className="text-xs font-bold text-indigo-400 uppercase tracking-widest">Administrador</p>
-              <p className="text-sm font-bold text-gray-900 truncate">Rafa Rosales</p>
+              <p className="text-xs font-bold text-blue-300 uppercase tracking-widest">Administrador</p>
+              <p className="text-sm font-bold text-white truncate">Rafa Rosales</p>
             </div>
           </div>
         </div>
@@ -263,27 +263,27 @@ export default function App() {
               className={`
                 w-full flex items-center justify-between px-4 py-3.5 rounded-2xl transition-all group
                 ${activeTab === item.id 
-                  ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-100' 
-                  : 'text-gray-500 hover:bg-gray-50 hover:text-gray-900'}
+                  ? 'bg-white text-[#002147] shadow-xl' 
+                  : 'text-blue-100 hover:bg-blue-900/40 hover:text-white'}
               `}
             >
               <div className="flex items-center gap-3">
-                <span className={`${activeTab === item.id ? 'text-white' : 'text-gray-400 group-hover:text-indigo-600'} transition-colors`}>
+                <span className={`${activeTab === item.id ? 'text-[#002147]' : 'text-blue-300 group-hover:text-white'} transition-colors`}>
                   {item.icon}
                 </span>
                 <span className="font-bold text-sm">{item.label}</span>
               </div>
               {activeTab === item.id && (
-                <motion.div layoutId="active-nav" className="w-1.5 h-1.5 bg-white rounded-full" />
+                <motion.div layoutId="active-nav" className="w-1.5 h-1.5 bg-[#002147] rounded-full" />
               )}
             </button>
           ))}
         </nav>
 
-        <div className="p-4 border-t border-gray-50">
+        <div className="p-4 border-t border-blue-900/50">
           <button 
             onClick={logOut}
-            className="w-full flex items-center gap-3 px-4 py-3.5 rounded-2xl text-red-500 hover:bg-red-50 font-bold text-sm transition-all group"
+            className="w-full flex items-center gap-3 px-4 py-3.5 rounded-2xl text-red-300 hover:bg-red-900/20 font-bold text-sm transition-all group"
           >
             <LogOut size={20} className="group-hover:translate-x-1 transition-transform" />
             Salir del Sistema
