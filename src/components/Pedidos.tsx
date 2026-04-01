@@ -715,9 +715,16 @@ export default function Pedidos({ user }: Props) {
           </div>
         </div>
       )}
-      {/* Modal de Detalles del Artículo */}
       {viewingArticulo && (() => {
-        const quoteData = viewingArticulo.datosQuote ? JSON.parse(viewingArticulo.datosQuote) : null;
+        let quoteData = null;
+        try {
+          quoteData = typeof viewingArticulo.datosQuote === 'string' 
+            ? JSON.parse(viewingArticulo.datosQuote) 
+            : viewingArticulo.datosQuote;
+        } catch (e) {
+          console.error("Error parsing quoteData:", e);
+        }
+        
         return (
           <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[70] flex items-center justify-center p-4">
             <div 

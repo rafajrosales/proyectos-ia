@@ -31,7 +31,9 @@ export function calcularCotizacion(
   proceso: string,
   complejidad: string,
   aplicarIva: boolean,
-  notas?: string
+  notas?: string,
+  fotoUrl?: string,
+  archivoUrl?: string
 ): DetailedQuoteData {
   const materialBase = MATERIALES[materialKey] || MATERIALES['mdf3'];
   const material = {
@@ -144,6 +146,8 @@ export function calcularCotizacion(
     margenMaterial,
     costoMaterial,
     costoDiseno,
-    notas
+    notas,
+    fotoUrl,
+    archivoUrl
   };
 }

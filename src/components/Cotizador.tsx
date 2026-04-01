@@ -154,10 +154,10 @@ export default function Cotizador({ config, user, loadedQuote, onQuoteLoaded }: 
   useEffect(() => {
     const res = calcularCotizacion(
       config, materialKey, lienzoKey, customLienzo, ancho, largo, cantidad, redondeo,
-      tiempoSimulado, setup, minutosDiseno, margen, urgencia, veta, proceso, complejidad, aplicarIva, notas
+      tiempoSimulado, setup, minutosDiseno, margen, urgencia, veta, proceso, complejidad, aplicarIva, notas, fotoUrl, archivoUrl
     );
     setResultado(res);
-  }, [config, materialKey, lienzoKey, customLienzo, ancho, largo, cantidad, redondeo, tiempoSimulado, setup, minutosDiseno, margen, urgencia, veta, proceso, complejidad, aplicarIva, notas]);
+  }, [config, materialKey, lienzoKey, customLienzo, ancho, largo, cantidad, redondeo, tiempoSimulado, setup, minutosDiseno, margen, urgencia, veta, proceso, complejidad, aplicarIva, notas, fotoUrl, archivoUrl]);
 
   const getQuoteDataToSave = async () => {
     if (!resultado) return null;
