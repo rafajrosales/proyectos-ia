@@ -309,6 +309,7 @@ export default function Cotizador({ config, user, loadedQuote, onQuoteLoaded }: 
     try {
       const pedidoData = {
         uid: user.uid,
+        numeroPedido: `PED-${Date.now().toString().slice(-6)}`,
         fecha: new Date().toISOString(),
         clienteId,
         clienteNombre: selectedCliente.nombre,

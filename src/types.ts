@@ -57,6 +57,7 @@ export interface PedidoArticulo {
 export interface Pedido {
   id?: string;
   uid: string;
+  numeroPedido: string;
   fecha: string;
   clienteId: string;
   clienteNombre: string;

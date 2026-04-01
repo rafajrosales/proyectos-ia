@@ -19,6 +19,7 @@ export default function Pedidos({ user }: Props) {
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<PedidoStatus | 'Todos'>('Todos');
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isAddArticleModalOpen, setIsAddArticleModalOpen] = useState(false);
   const [editingPedido, setEditingPedido] = useState<Pedido | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [viewingArticulo, setViewingArticulo] = useState<PedidoArticulo | null>(null);
@@ -481,7 +482,7 @@ export default function Pedidos({ user }: Props) {
                   <label className="block text-sm font-semibold text-gray-700">Artículos del Pedido *</label>
                   <button 
                     type="button" 
-                    onClick={addArticulo}
+                    onClick={() => setIsAddArticleModalOpen(true)}
                     className="text-xs font-bold text-indigo-600 hover:text-indigo-800 flex items-center gap-1 bg-indigo-50 px-2 py-1 rounded-lg transition-colors"
                   >
                     <Plus size={14} /> Agregar Artículo
@@ -711,6 +712,52 @@ export default function Pedidos({ user }: Props) {
                   {isSubmitting ? 'Guardando...' : (editingPedido ? 'Actualizar' : 'Crear Pedido')}
                 </button>
               </div>
+              {isAddArticleModalOpen && (
+                <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+                  <div className="bg-white rounded-2xl shadow-xl max-w-sm w-full p-6">
+                    <h3 className="text-lg font-bold mb-4">Agregar Artículo</h3>
+                    <div className="space-y-4">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          addArticulo();
+                          setIsAddArticleModalOpen(false);
+                        }}
+                        className="w-full py-3 bg-indigo-600 text-white rounded-xl font-bold hover:bg-indigo-700 transition-colors"
+                      >
+                        Artículo en blanco
+                      </button>
+                      <div className="space-y-2">
+                        <label className="text-sm font-semibold text-gray-700">Desde cotización:</label>
+                        <select
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500"
+                          onChange={(e) => {
+                            if (e.target.value) {
+                              handleSelectQuote(e.target.value);
+                              setIsAddArticleModalOpen(false);
+                            }
+                          }}
+                          value=""
+                        >
+                          <option value="">Selecciona...</option>
+                          {quotes.map(q => (
+                            <option key={q.id} value={q.id}>
+                              {new Date(q.fecha).toLocaleDateString('es-MX')} - {q.cliente} (${q.total.toFixed(2)})
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setIsAddArticleModalOpen(false)}
+                        className="w-full py-2 text-gray-500 font-semibold hover:text-gray-700 transition-colors"
+                      >
+                        Cancelar
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
             </form>
           </div>
         </div>
