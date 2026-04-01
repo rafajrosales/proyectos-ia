@@ -1,5 +1,5 @@
 import { DetailedQuoteData, Quote } from '../types';
-import jsPDF from 'jspdf';
+import { jsPDF } from 'jspdf';
 
 export function generarPDF(articulo: string, resultado: DetailedQuoteData, clienteNombre?: string) {
   const doc = new jsPDF();

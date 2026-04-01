@@ -297,7 +297,10 @@ export default function Cotizador({ config, user, loadedQuote, onQuoteLoaded }: 
       toast.error('Debes seleccionar un cliente para crear un pedido');
       return;
     }
-    if (!resultado) return;
+    if (!resultado) {
+      toast.error('No hay resultados de cotización para convertir');
+      return;
+    }
 
     const selectedCliente = clientes.find(c => c.id === clienteId);
     if (!selectedCliente) return;
@@ -803,6 +806,7 @@ export default function Cotizador({ config, user, loadedQuote, onQuoteLoaded }: 
           <div className="grid grid-cols-2 gap-3">
             <button 
               onClick={() => {
+                if (!resultado) return;
                 const selectedCliente = clientes.find(c => c.id === clienteId);
                 generarPDF(cliente || 'Artículo', resultado, selectedCliente?.nombre);
               }} 
@@ -810,7 +814,7 @@ export default function Cotizador({ config, user, loadedQuote, onQuoteLoaded }: 
             >
               <FileText size={18} /> PDF
             </button>
-            <button onClick={() => exportarJSON(resultado, `Cotizacion_${cliente || 'Artículo'}_${Date.now()}.json`)} className="flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 rounded-xl shadow-sm transition-colors">
+            <button onClick={() => { if (resultado) exportarJSON(resultado, `Cotizacion_${cliente || 'Artículo'}_${Date.now()}.json`) }} className="flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 rounded-xl shadow-sm transition-colors">
               <Download size={18} /> JSON
             </button>
           </div>
