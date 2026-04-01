@@ -489,84 +489,156 @@ export default function Pedidos({ user }: Props) {
                 </div>
                 
                 <div className="overflow-hidden border border-gray-200 rounded-xl">
-                  <table className="w-full text-left border-collapse">
-                    <thead className="bg-gray-50 text-[10px] font-bold text-gray-500 uppercase tracking-wider">
-                      <tr>
-                        <th className="px-3 py-2 border-b border-gray-200">Artículo</th>
-                        <th className="px-3 py-2 border-b border-gray-200 w-16 text-center">Cant.</th>
-                        <th className="px-3 py-2 border-b border-gray-200 w-24 text-right">P. Unit.</th>
-                        <th className="px-3 py-2 border-b border-gray-200 w-24 text-right">Total</th>
-                        <th className="px-3 py-2 border-b border-gray-200 w-20 text-center">Acciones</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-gray-100 bg-white">
-                      {articulos.map((art, index) => (
-                        <tr key={index} className="hover:bg-gray-50 transition-colors">
-                          <td className="px-3 py-2">
-                            <input 
-                              type="text" 
-                              value={art.nombre}
-                              onChange={(e) => updateArticulo(index, 'nombre', e.target.value)}
-                              placeholder="Nombre..."
-                              className="w-full bg-transparent border-none focus:ring-0 text-sm p-0 placeholder:text-gray-300"
-                              required
-                            />
-                          </td>
-                          <td className="px-3 py-2">
+                  {/* Desktop View: Table */}
+                  <div className="hidden md:block">
+                    <table className="w-full text-left border-collapse">
+                      <thead className="bg-gray-50 text-[10px] font-bold text-gray-500 uppercase tracking-wider">
+                        <tr>
+                          <th className="px-3 py-2 border-b border-gray-200">Artículo</th>
+                          <th className="px-3 py-2 border-b border-gray-200 w-16 text-center">Cant.</th>
+                          <th className="px-3 py-2 border-b border-gray-200 w-24 text-right">P. Unit.</th>
+                          <th className="px-3 py-2 border-b border-gray-200 w-24 text-right">Total</th>
+                          <th className="px-3 py-2 border-b border-gray-200 w-20 text-center">Acciones</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-gray-100 bg-white">
+                        {articulos.map((art, index) => (
+                          <tr key={index} className="hover:bg-gray-50 transition-colors">
+                            <td className="px-3 py-2">
+                              <input 
+                                type="text" 
+                                value={art.nombre}
+                                onChange={(e) => updateArticulo(index, 'nombre', e.target.value)}
+                                placeholder="Nombre..."
+                                className="w-full bg-transparent border-none focus:ring-0 text-sm p-0 placeholder:text-gray-300"
+                                required
+                              />
+                            </td>
+                            <td className="px-3 py-2">
+                              <input 
+                                type="number" 
+                                value={art.cantidad || ''}
+                                onChange={(e) => updateArticulo(index, 'cantidad', e.target.value === '' ? 0 : Number(e.target.value))}
+                                onFocus={(e) => e.target.select()}
+                                min="1"
+                                className="w-full bg-transparent border-none focus:ring-0 text-sm p-0 text-center"
+                                required
+                              />
+                            </td>
+                            <td className="px-3 py-2">
+                              <input 
+                                type="number" 
+                                step="0.01"
+                                value={art.precioUnitario || ''}
+                                onChange={(e) => updateArticulo(index, 'precioUnitario', e.target.value === '' ? 0 : Number(e.target.value))}
+                                onFocus={(e) => e.target.select()}
+                                className="w-full bg-transparent border-none focus:ring-0 text-sm p-0 text-right font-mono"
+                                required
+                              />
+                            </td>
+                            <td className="px-3 py-2 text-right">
+                              <span className="text-sm font-bold text-gray-600 font-mono">
+                                ${art.total.toLocaleString()}
+                              </span>
+                            </td>
+                            <td className="px-3 py-2">
+                              <div className="flex items-center justify-center gap-1">
+                                {art.datosQuote && (
+                                  <button
+                                    type="button"
+                                    onClick={() => setViewingArticulo(art)}
+                                    className="p-1.5 text-indigo-500 hover:bg-indigo-50 rounded-lg transition-colors"
+                                    title="Ver detalles"
+                                  >
+                                    <Eye size={14} />
+                                  </button>
+                                )}
+                                {articulos.length > 1 && (
+                                  <button 
+                                    type="button" 
+                                    onClick={() => removeArticulo(index)}
+                                    className="p-1.5 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
+                                    title="Eliminar"
+                                  >
+                                    <Trash size={14} />
+                                  </button>
+                                )}
+                              </div>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+
+                  {/* Mobile View: Cards */}
+                  <div className="md:hidden divide-y divide-gray-100">
+                    {articulos.map((art, index) => (
+                      <div key={index} className="p-4 space-y-3 bg-white">
+                        <div className="flex items-center justify-between gap-2">
+                          <input 
+                            type="text" 
+                            value={art.nombre}
+                            onChange={(e) => updateArticulo(index, 'nombre', e.target.value)}
+                            placeholder="Nombre del artículo..."
+                            className="flex-1 bg-gray-50 px-3 py-1.5 rounded-lg border border-gray-200 text-sm font-bold"
+                            required
+                          />
+                          <div className="flex items-center gap-1">
+                            {art.datosQuote && (
+                              <button
+                                type="button"
+                                onClick={() => setViewingArticulo(art)}
+                                className="p-2 text-indigo-500 bg-indigo-50 rounded-lg"
+                              >
+                                <Eye size={16} />
+                              </button>
+                            )}
+                            {articulos.length > 1 && (
+                              <button 
+                                type="button" 
+                                onClick={() => removeArticulo(index)}
+                                className="p-2 text-red-500 bg-red-50 rounded-lg"
+                              >
+                                <Trash size={16} />
+                              </button>
+                            )}
+                          </div>
+                        </div>
+                        <div className="grid grid-cols-3 gap-3">
+                          <div>
+                            <label className="block text-[10px] font-bold text-gray-400 uppercase mb-1">Cant.</label>
                             <input 
                               type="number" 
                               value={art.cantidad || ''}
                               onChange={(e) => updateArticulo(index, 'cantidad', e.target.value === '' ? 0 : Number(e.target.value))}
                               onFocus={(e) => e.target.select()}
-                              min="1"
-                              className="w-full bg-transparent border-none focus:ring-0 text-sm p-0 text-center"
+                              className="w-full bg-gray-50 px-3 py-1.5 rounded-lg border border-gray-200 text-sm text-center"
                               required
                             />
-                          </td>
-                          <td className="px-3 py-2">
+                          </div>
+                          <div>
+                            <label className="block text-[10px] font-bold text-gray-400 uppercase mb-1">P. Unit.</label>
                             <input 
                               type="number" 
                               step="0.01"
                               value={art.precioUnitario || ''}
                               onChange={(e) => updateArticulo(index, 'precioUnitario', e.target.value === '' ? 0 : Number(e.target.value))}
                               onFocus={(e) => e.target.select()}
-                              className="w-full bg-transparent border-none focus:ring-0 text-sm p-0 text-right font-mono"
+                              className="w-full bg-gray-50 px-3 py-1.5 rounded-lg border border-gray-200 text-sm text-right"
                               required
                             />
-                          </td>
-                          <td className="px-3 py-2 text-right">
-                            <span className="text-sm font-bold text-gray-600 font-mono">
+                          </div>
+                          <div>
+                            <label className="block text-[10px] font-bold text-gray-400 uppercase mb-1 text-right">Total</label>
+                            <div className="w-full px-3 py-1.5 bg-indigo-50 text-indigo-700 rounded-lg text-sm font-bold text-right">
                               ${art.total.toLocaleString()}
-                            </span>
-                          </td>
-                          <td className="px-3 py-2">
-                            <div className="flex items-center justify-center gap-1">
-                              {art.datosQuote && (
-                                <button
-                                  type="button"
-                                  onClick={() => setViewingArticulo(art)}
-                                  className="p-1.5 text-indigo-500 hover:bg-indigo-50 rounded-lg transition-colors"
-                                  title="Ver detalles"
-                                >
-                                  <Eye size={14} />
-                                </button>
-                              )}
-                              {articulos.length > 1 && (
-                                <button 
-                                  type="button" 
-                                  onClick={() => removeArticulo(index)}
-                                  className="p-1.5 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
-                                  title="Eliminar"
-                                >
-                                  <Trash size={14} />
-                                </button>
-                              )}
                             </div>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
                 </div>
               </div>
 
@@ -644,56 +716,87 @@ export default function Pedidos({ user }: Props) {
         </div>
       )}
       {/* Modal de Detalles del Artículo */}
-      {viewingArticulo && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[70] flex items-center justify-center p-4">
-          <div 
-            className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden animate-in zoom-in-95 duration-200"
-          >
-            <div className="p-6 border-b border-gray-100 flex items-center justify-between bg-indigo-50">
-              <h3 className="text-lg font-bold text-indigo-900">Detalles del Producto</h3>
-              <button 
-                onClick={() => setViewingArticulo(null)}
-                className="p-2 hover:bg-white rounded-full transition-colors text-indigo-400"
-              >
-                <X size={20} />
-              </button>
-            </div>
-            <div className="p-6 space-y-4">
-              <div>
-                <label className="text-[10px] font-bold text-gray-400 uppercase">Nombre</label>
-                <p className="text-gray-800 font-medium">{viewingArticulo.nombre}</p>
+      {viewingArticulo && (() => {
+        const quoteData = viewingArticulo.datosQuote ? JSON.parse(viewingArticulo.datosQuote) : null;
+        return (
+          <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[70] flex items-center justify-center p-4">
+            <div 
+              className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden animate-in zoom-in-95 duration-200 flex flex-col max-h-[90vh]"
+            >
+              <div className="p-6 border-b border-gray-100 flex items-center justify-between bg-indigo-50 shrink-0">
+                <h3 className="text-lg font-bold text-indigo-900">Detalles del Producto</h3>
+                <button 
+                  onClick={() => setViewingArticulo(null)}
+                  className="p-2 hover:bg-white rounded-full transition-colors text-indigo-400"
+                >
+                  <X size={20} />
+                </button>
               </div>
               
-              {viewingArticulo.datosQuote && (
-                <div className="space-y-3">
-                  <label className="text-[10px] font-bold text-gray-400 uppercase">Especificaciones</label>
-                  <div className="grid grid-cols-2 gap-3">
-                    {Object.entries(viewingArticulo.datosQuote).map(([key, value]) => (
-                      <div key={key} className="p-2 bg-gray-50 rounded-lg border border-gray-100">
-                        <p className="text-[10px] text-gray-400 capitalize">{key.replace(/([A-Z])/g, ' $1')}</p>
-                        <p className="text-xs font-bold text-gray-700">{String(value)}</p>
-                      </div>
-                    ))}
+              <div className="p-6 space-y-6 overflow-y-auto">
+                {/* Foto de Vista Previa */}
+                {quoteData?.fotoUrl && (
+                  <div className="relative aspect-video rounded-xl overflow-hidden bg-gray-100 border border-gray-200 shadow-inner">
+                    <img 
+                      src={quoteData.fotoUrl} 
+                      alt={viewingArticulo.nombre}
+                      className="w-full h-full object-contain"
+                      referrerPolicy="no-referrer"
+                    />
+                    <div className="absolute top-2 right-2 bg-black/50 backdrop-blur-md text-white text-[10px] px-2 py-1 rounded-full font-bold">
+                      Vista Previa
+                    </div>
+                  </div>
+                )}
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="text-[10px] font-bold text-gray-400 uppercase">Nombre</label>
+                    <p className="text-gray-800 font-bold">{viewingArticulo.nombre}</p>
+                  </div>
+                  <div>
+                    <label className="text-[10px] font-bold text-gray-400 uppercase">Precio Unitario</label>
+                    <p className="text-lg font-bold text-indigo-600">${viewingArticulo.precioUnitario.toLocaleString()}</p>
                   </div>
                 </div>
-              )}
+                
+                {quoteData && (
+                  <div className="space-y-3">
+                    <label className="text-[10px] font-bold text-gray-400 uppercase">Especificaciones Técnicas</label>
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="p-2.5 bg-gray-50 rounded-xl border border-gray-100">
+                        <p className="text-[10px] text-gray-400 uppercase">Material</p>
+                        <p className="text-xs font-bold text-gray-700">{quoteData.material?.nombre}</p>
+                      </div>
+                      <div className="p-2.5 bg-gray-50 rounded-xl border border-gray-100">
+                        <p className="text-[10px] text-gray-400 uppercase">Dimensiones</p>
+                        <p className="text-xs font-bold text-gray-700">{quoteData.ancho} × {quoteData.largo} cm</p>
+                      </div>
+                      <div className="p-2.5 bg-gray-50 rounded-xl border border-gray-100">
+                        <p className="text-[10px] text-gray-400 uppercase">Lienzo</p>
+                        <p className="text-xs font-bold text-gray-700">{quoteData.lienzo?.nombre}</p>
+                      </div>
+                      <div className="p-2.5 bg-gray-50 rounded-xl border border-gray-100">
+                        <p className="text-[10px] text-gray-400 uppercase">Tiempo Est.</p>
+                        <p className="text-xs font-bold text-gray-700">{quoteData.tiempoTotalMinutos?.toFixed(1)} min</p>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
 
-              <div className="pt-4 border-t border-gray-100 flex justify-between items-center">
-                <div>
-                  <p className="text-[10px] text-gray-400 uppercase">Precio Unitario</p>
-                  <p className="text-lg font-bold text-indigo-600">${viewingArticulo.precioUnitario.toLocaleString()}</p>
-                </div>
+              <div className="p-6 border-t border-gray-100 bg-gray-50 shrink-0">
                 <button
                   onClick={() => setViewingArticulo(null)}
-                  className="px-6 py-2 bg-indigo-600 text-white rounded-xl font-bold text-sm shadow-lg shadow-indigo-100"
+                  className="w-full py-3 bg-indigo-600 text-white rounded-xl font-bold text-sm shadow-lg shadow-indigo-100 active:scale-[0.98] transition-all"
                 >
-                  Cerrar
+                  Cerrar Detalles
                 </button>
               </div>
             </div>
           </div>
-        </div>
-      )}
+        );
+      })()}
     </div>
   );
 }
