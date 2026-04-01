@@ -65,9 +65,10 @@ interface Props {
   user: User;
   loadedQuote?: Quote | null;
   onQuoteLoaded?: () => void;
+  onPedidoCreated?: () => void;
 }
 
-export default function Cotizador({ config, user, loadedQuote, onQuoteLoaded }: Props) {
+export default function Cotizador({ config, user, loadedQuote, onQuoteLoaded, onPedidoCreated }: Props) {
   const [materialKey, setMaterialKey] = useState('mdf3');
   const [lienzoKey, setLienzoKey] = useState('std120x240');
   const [customLienzo, setCustomLienzo] = useState({ ancho: 120, largo: 240 });
@@ -330,6 +331,8 @@ export default function Cotizador({ config, user, loadedQuote, onQuoteLoaded }: 
 
       await addDoc(collection(db, `users/${user.uid}/pedidos`), pedidoData);
       toast.success('¡Pedido creado con éxito!');
+      onPedidoCreated?.();
+      handleNew();
     } catch (error) {
       handleFirestoreError(error, OperationType.CREATE, `users/${user.uid}/pedidos`);
     } finally {
@@ -786,7 +789,7 @@ export default function Cotizador({ config, user, loadedQuote, onQuoteLoaded }: 
                 <button onClick={() => setShowDeleteConfirm(true)} disabled={saving} className="w-full flex items-center justify-center gap-2 bg-red-600 hover:bg-red-700 text-white font-bold py-3 rounded-xl shadow-md transition-colors">
                   <Trash2 size={18} /> Eliminar
                 </button>
-                <button onClick={handleConvertToOrder} disabled={saving || !clienteId} className="w-full flex items-center justify-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 rounded-xl shadow-md transition-colors disabled:opacity-50">
+                <button onClick={handleConvertToOrder} disabled={saving} className="w-full flex items-center justify-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 rounded-xl shadow-md transition-colors disabled:opacity-50">
                   <Package size={18} /> Convertir a Pedido
                 </button>
               </div>
@@ -799,7 +802,7 @@ export default function Cotizador({ config, user, loadedQuote, onQuoteLoaded }: 
               <button onClick={handleSaveAsNew} disabled={saving} className="w-full flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white font-bold py-4 rounded-xl shadow-md transition-colors">
                 <Save size={20} /> {saving ? 'Guardando...' : 'Guardar'}
               </button>
-              <button onClick={handleConvertToOrder} disabled={saving || !clienteId} className="w-full flex items-center justify-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-4 rounded-xl shadow-md transition-colors disabled:opacity-50">
+              <button onClick={handleConvertToOrder} disabled={saving} className="w-full flex items-center justify-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-4 rounded-xl shadow-md transition-colors disabled:opacity-50">
                 <Package size={20} /> Pedido
               </button>
             </div>

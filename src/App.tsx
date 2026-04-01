@@ -302,7 +302,7 @@ export default function App() {
               exit={{ opacity: 0, y: -10 }}
               transition={{ duration: 0.2 }}
             >
-              {activeTab === 'cotizador' && <Cotizador config={config} user={user} loadedQuote={loadedQuote} onQuoteLoaded={() => setLoadedQuote(null)} />}
+              {activeTab === 'cotizador' && <Cotizador config={config} user={user} loadedQuote={loadedQuote} onQuoteLoaded={() => setLoadedQuote(null)} onPedidoCreated={() => setActiveTab('pedidos')} />}
               {activeTab === 'pedidos' && <Pedidos user={user} />}
               {activeTab === 'clientes' && <Clientes user={user} />}
               {activeTab === 'configuracion' && <Configuracion config={config} user={user} onUpdate={setConfig} />}
