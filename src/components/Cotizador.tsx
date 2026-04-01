@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { UserConfig, MATERIALES, LIENZOS, DetailedQuoteData, Quote, OperationType, Cliente, PedidoStatus } from '../types';
+import { UserConfig, MATERIALES, LIENZOS, DetailedQuoteData, Quote, OperationType, Cliente, PedidoStatus, Pedido } from '../types';
 import { calcularCotizacion } from '../utils/calculations';
 import { generarPDF, exportarJSON } from '../utils/export';
 import { db } from '../firebase';
@@ -97,9 +97,22 @@ export default function Cotizador({ config, user, loadedQuote, onQuoteLoaded, on
 
   const [currentQuoteId, setCurrentQuoteId] = useState<string | null>(null);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [pedidos, setPedidos] = useState<Pedido[]>([]);
 
   const [resultado, setResultado] = useState<DetailedQuoteData | null>(null);
   const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    const q = collection(db, `users/${user.uid}/pedidos`);
+    const unsub = onSnapshot(q, (snapshot) => {
+      const loaded: Pedido[] = [];
+      snapshot.forEach((doc) => {
+        loaded.push({ id: doc.id, ...doc.data() } as Pedido);
+      });
+      setPedidos(loaded);
+    });
+    return () => unsub();
+  }, [user.uid]);
 
   useEffect(() => {
     const q = query(collection(db, `users/${user.uid}/clientes`), orderBy('nombre', 'asc'));
@@ -308,9 +321,30 @@ export default function Cotizador({ config, user, loadedQuote, onQuoteLoaded, on
 
     setSaving(true);
     try {
+      const generateNumeroPedido = () => {
+        const now = new Date();
+        const mm = String(now.getMonth() + 1).padStart(2, '0');
+        const dd = String(now.getDate()).padStart(2, '0');
+        const yyyy = now.getFullYear();
+        const datePrefix = `${mm}${dd}${yyyy}`;
+
+        const todayPedidos = pedidos.filter(p => p.numeroPedido && p.numeroPedido.includes(datePrefix));
+        let maxSeq = 0;
+        todayPedidos.forEach(p => {
+          const parts = p.numeroPedido.split('-');
+          if (parts.length === 3) {
+            const seq = parseInt(parts[2], 10);
+            if (!isNaN(seq) && seq > maxSeq) {
+              maxSeq = seq;
+            }
+          }
+        });
+        return `PED-${datePrefix}-${String(maxSeq + 1).padStart(3, '0')}`;
+      };
+
       const pedidoData = {
         uid: user.uid,
-        numeroPedido: `PED-${Date.now().toString().slice(-6)}`,
+        numeroPedido: generateNumeroPedido(),
         fecha: new Date().toISOString(),
         clienteId,
         clienteNombre: selectedCliente.nombre,

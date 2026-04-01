@@ -185,9 +185,30 @@ export default function Pedidos({ user }: Props) {
 
     const totalGeneral = Number(processedArticulos.reduce((sum, art) => sum + art.total, 0).toFixed(2));
 
+    const generateNumeroPedido = () => {
+      const now = new Date();
+      const mm = String(now.getMonth() + 1).padStart(2, '0');
+      const dd = String(now.getDate()).padStart(2, '0');
+      const yyyy = now.getFullYear();
+      const datePrefix = `${mm}${dd}${yyyy}`;
+
+      const todayPedidos = pedidos.filter(p => p.numeroPedido && p.numeroPedido.includes(datePrefix));
+      let maxSeq = 0;
+      todayPedidos.forEach(p => {
+        const parts = p.numeroPedido.split('-');
+        if (parts.length === 3) {
+          const seq = parseInt(parts[2], 10);
+          if (!isNaN(seq) && seq > maxSeq) {
+            maxSeq = seq;
+          }
+        }
+      });
+      return `PED-${datePrefix}-${String(maxSeq + 1).padStart(3, '0')}`;
+    };
+
     const pedidoData = {
       uid: user.uid,
-      numeroPedido: editingPedido ? editingPedido.numeroPedido : `PED-${Date.now().toString().slice(-6)}`,
+      numeroPedido: editingPedido ? editingPedido.numeroPedido : generateNumeroPedido(),
       fecha: editingPedido ? editingPedido.fecha : new Date().toISOString(),
       clienteId,
       clienteNombre: selectedCliente.nombre,
