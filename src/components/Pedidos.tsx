@@ -238,12 +238,17 @@ export default function Pedidos({ user }: Props) {
   };
 
   const handleDelete = async (id: string) => {
+    console.log("Deleting pedido:", id, "for user:", user.uid);
+    const path = `users/${user.uid}/pedidos/${id}`;
+    console.log("Path:", path);
     if (window.confirm('¿Estás seguro de eliminar este pedido?')) {
       try {
-        await deleteDoc(doc(db, `users/${user.uid}/pedidos/${id}`));
+        await deleteDoc(doc(db, path));
         toast.success('Pedido eliminado');
       } catch (error) {
-        handleFirestoreError(error, OperationType.DELETE, `users/${user.uid}/pedidos/${id}`);
+        console.error("Error deleting pedido:", error);
+        toast.error('Error al eliminar el pedido');
+        handleFirestoreError(error, OperationType.DELETE, path);
       }
     }
   };
@@ -426,7 +431,7 @@ export default function Pedidos({ user }: Props) {
                       <Edit2 size={20} />
                     </button>
                     <button 
-                      onClick={() => pedido.id && handleDelete(pedido.id)}
+                      onClick={() => { console.log("Delete clicked:", pedido.id); pedido.id && handleDelete(pedido.id) }}
                       className="p-2.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-xl transition-colors"
                       title="Eliminar Pedido"
                     >
