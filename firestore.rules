@@ -49,6 +49,7 @@ service cloud.firestore {
     // Document ID: auto-generated
     // Fields:
     //   - uid: string (required) - The user's ID.
+    //   - numeroPedido: string (required) - Unique order number.
     //   - fecha: string (required) - ISO string date.
     //   - clienteId: string (required) - Customer ID.
     //   - clienteNombre: string (required) - Customer name.
@@ -144,8 +145,9 @@ service cloud.firestore {
     }
 
     function isValidPedido() {
-      return hasOnlyAllowedFields(['uid', 'fecha', 'clienteId', 'clienteNombre', 'articulos', 'total', 'status', 'fechaEntrega', 'notas']) &&
+      return hasOnlyAllowedFields(['uid', 'numeroPedido', 'fecha', 'clienteId', 'clienteNombre', 'articulos', 'total', 'status', 'fechaEntrega', 'notas']) &&
              request.resource.data.uid is string && request.resource.data.uid.size() > 0 && request.resource.data.uid.size() < 100 &&
+             request.resource.data.numeroPedido is string && request.resource.data.numeroPedido.size() > 0 && request.resource.data.numeroPedido.size() < 100 &&
              isValidDateString(request.resource.data.fecha) &&
              request.resource.data.clienteId is string && request.resource.data.clienteId.size() < 100 &&
              request.resource.data.clienteNombre is string && request.resource.data.clienteNombre.size() <= 200 &&
