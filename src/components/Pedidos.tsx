@@ -354,6 +354,7 @@ export default function Pedidos({ user }: Props) {
                     {getStatusIcon(pedido.status)}
                   </div>
                   <div>
+                    <p className="text-[10px] font-bold text-indigo-600 uppercase tracking-wider">{pedido.numeroPedido}</p>
                     <h3 className="font-bold text-gray-900 text-lg">
                       {pedido.articulos && pedido.articulos.length > 0 
                         ? (pedido.articulos.length === 1 
@@ -432,7 +433,7 @@ export default function Pedidos({ user }: Props) {
             <div className="flex items-center justify-between p-6 border-b border-gray-100 bg-indigo-50/30">
               <h3 className="text-xl font-bold text-gray-800 flex items-center gap-2">
                 <Package className="text-indigo-600" />
-                {editingPedido ? 'Editar Pedido' : 'Nuevo Pedido'}
+                {editingPedido ? `Editar Pedido ${editingPedido.numeroPedido}` : 'Nuevo Pedido'}
               </h3>
               <button onClick={() => setIsModalOpen(false)} className="p-2 text-gray-400 hover:text-gray-600 rounded-lg hover:bg-gray-100 transition-colors">
                 <X size={24} />
