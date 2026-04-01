@@ -187,6 +187,7 @@ export default function Pedidos({ user }: Props) {
 
     const pedidoData = {
       uid: user.uid,
+      numeroPedido: editingPedido ? editingPedido.numeroPedido : `PED-${Date.now().toString().slice(-6)}`,
       fecha: editingPedido ? editingPedido.fecha : new Date().toISOString(),
       clienteId,
       clienteNombre: selectedCliente.nombre,
